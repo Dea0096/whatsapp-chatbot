@@ -81,6 +81,10 @@ def handle_messages():
                         send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
     
     return "OK", 200
+    
+@app.route('/', methods=['GET'])
+def keep_alive():
+    return "Il server è attivo!", 200
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
