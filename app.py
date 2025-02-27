@@ -54,33 +54,28 @@ def handle_messages():
                     if phone_number in users_state:
                         if users_state[phone_number]["step"] == "name":
                             users_state[phone_number]["name"] = text
-                            send_whatsapp_message(phone_number, f"Grazie, {text}! Ora dimmi la tua data di nascita in formato GG/MM/AAAA 🎂")
+                            send_whatsapp_message(phone_number, f"Grazie, {text}! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
                             users_state[phone_number]["step"] = "birthday"
                         
                         elif users_state[phone_number]["step"] == "birthday":
                             users_state[phone_number]["birthday"] = text
-                            send_whatsapp_message(phone_number, f"Perfetto! E tu di dove sei? Dimmi la tua città! 🏡")
+                            send_whatsapp_message(phone_number, f"E tu di dove sei? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
                             users_state[phone_number]["step"] = "city"
 
                         elif users_state[phone_number]["step"] == "city":
                             users_state[phone_number]["city"] = text
-                            send_whatsapp_message(phone_number, f"Quando vieni più spesso da noi? ☕🍽️🍹")
+                            send_whatsapp_message(phone_number, f"Ultima domanda e poi siamo ufficialmente best friends, {nome}! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo? ☕🍽️🍹")
                             users_state[phone_number]["step"] = "visit_time"
-
-                        elif users_state[phone_number]["step"] == "visit_time":
-                            users_state[phone_number]["visit_time"] = text
-                            send_whatsapp_message(phone_number, f"Vuoi lasciarmi la tua email per ricevere offerte esclusive? ✨ (Opzionale)")
-                            users_state[phone_number]["step"] = "email"
 
                         elif users_state[phone_number]["step"] == "email":
                             users_state[phone_number]["email"] = text
-                            send_whatsapp_message(phone_number, f"Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata! 🎫✨")
+                            send_whatsapp_message(phone_number, f"Ecco fatto, {nome}! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
                             del users_state[phone_number]  # Reset utente dopo la registrazione
 
                     # Se l'utente scrive "FIDELITY", avvia il flusso
                     elif text == "fidelity":
                         users_state[phone_number] = {"step": "name"}
-                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Dimmi il tuo nome e cognome per iniziare! ✨")
+                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family con la Fidelity Card 🎉 Ti farò qualche domandina per completare l’iscrizione, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Dimmi il tuo nome e cognome, così posso registrarti correttamente ✨ (Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
     
     return "OK", 200
 
