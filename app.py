@@ -1,59 +1,79 @@
 from flask import Flask, request, jsonify
 import requests
-import json
+import logging
 
 app = Flask(__name__)
 
-# Token di accesso per WhatsApp (sostituisci con il tuo)
-WHATSAPP_TOKEN = "EAAQaZCVgHS2IBO0ZCzCZAVrCZAZBZB2aMtn8oDkeM63RNAVWIms2ZBOshi4K5qWHfZCqiZBXuS2oeBwwrpPamfkaK62eZCpKZCW0xg66naP9tmYU6iFcjTF9sIDn2xPiKATlIfvpo5wyfNtmfOvceOfFD3XTv4Ysyjgkv2lHkVG8WxTi2u9Cb9vuPdIpcCKUMiCF7jAVwZAGQ4TEivII63cCcKGkJVbujakrZBltJn0GBAOkVrAZDZD"
+# Configurazione logging per debug
+logging.basicConfig(level=logging.INFO)
 
-# ID del numero di telefono collegato all'API di WhatsApp
+# Token di accesso aggiornato
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO6sH83RDVavhtDHwQljO8tJvqkZBbt4m1AAmLl0ZA5qmmju5UwpqFniyCjrFAr9i2R6ZAZBlHwCcHrO0ny8zbm9VftreZBGEVWoMt4eSSbPZBh6NfdQv2SCDdyDzS60bxN2BFZA9YNTNsTRAQqMRG0UNuGYk3XFVvCee0fEU5GKpfZBIKA7qfCTJx7ZAbibwsXeYPxqbzSO9ChSPLhUisBOUFVlikgZBzZA"
+
+# ID del numero di telefono di WhatsApp Business
 PHONE_NUMBER_ID = "598409370016822"
 
-@app.route('/webhook', methods=['POST'])
+@app.route("/", methods=["GET"])
+def home():
+    return "WhatsApp Chatbot è attivo!", 200
+
+@app.route("/webhook", methods=["GET", "POST"])
 def webhook():
-    """Gestisce i messaggi in entrata da WhatsApp."""
-    data = request.json  # Riceve il JSON dalla richiesta
-    print("📩 Messaggio ricevuto:", json.dumps(data, indent=2))  # Debug: stampa il JSON ricevuto
+    if request.method == "GET":
+        # Verifica della configurazione del webhook con il token di verifica
+        verify_token = "MIO TOKEN DI VERIFICA"
+        mode = request.args.get("hub.mode")
+        token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+        if mode == "subscribe" and token == verify_token:
+            logging.info("Webhook verificato con successo!")
+            return challenge, 200
+        else:
+            logging.error("Verifica del webhook fallita.")
+            return "Verifica fallita", 403
 
-    # Controlla se ci sono messaggi validi nel payload ricevuto
-    if 'entry' in data:
-        try:
-            message = data['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
-            sender = data['entry'][0]['changes'][0]['value']['messages'][0]['from']
-            print(f"📨 Messaggio ricevuto: {message} | Da: {sender}")
+    elif request.method == "POST":
+        data = request.get_json()
+        logging.info(f"Messaggio ricevuto: {data}")
 
-            # Controllo se il messaggio ricevuto è "fidelity"
-            if message.lower() == "fidelity":
-                response_text = "🎉 Benvenuto nel nostro programma Fidelity! Ti facciamo qualche domanda veloce 😊"
-                send_whatsapp_message(sender, response_text)
-                return jsonify({"status": "success", "message": "Risposta inviata"}), 200
+        if "entry" in data and "changes" in data["entry"][0]:
+            message_data = data["entry"][0]["changes"][0]["value"]
 
-        except KeyError as e:
-            print("⚠️ Errore nel parsing del JSON:", str(e))
-            return jsonify({"status": "error", "message": "Errore nel parsing JSON"}), 400
+            if "messages" in message_data:
+                # Estrai il numero di telefono e il messaggio
+                phone_number = message_data["messages"][0]["from"]
+                text_received = message_data["messages"][0]["text"]["body"].lower()
 
-    return jsonify({"status": "error", "message": "Nessun messaggio trovato"}), 400
+                logging.info(f"Messaggio ricevuto: {text_received} | Da: {phone_number}")
 
-def send_whatsapp_message(phone, text):
-    """Invia un messaggio WhatsApp utilizzando le API di Meta."""
-    url = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
+                if text_received == "fidelity":
+                    send_whatsapp_message(phone_number, "Ciao! 😊 Sei pronto per entrare nel nostro programma Fidelity? Rispondi con 'Sì' per iniziare!")
+
+        return jsonify({"status": "received"}), 200
+
+def send_whatsapp_message(to, message):
+    """Invia un messaggio WhatsApp utilizzando l'API di Meta."""
+    url = f"https://graph.facebook.com/v18.0/{PHONE_NUMBER_ID}/messages"
     headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
     payload = {
         "messaging_product": "whatsapp",
-        "to": phone,
-        "text": {"body": text}
+        "recipient_type": "individual",
+        "to": to,
+        "type": "text",
+        "text": {
+            "body": message
+        }
     }
 
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, json=payload, headers=headers)
 
     if response.status_code == 200:
-        print(f"✅ Messaggio inviato con successo a {phone}")
+        logging.info("Messaggio inviato con successo!")
     else:
-        print(f"❌ Errore nell'invio del messaggio: {response.text}")
+        logging.error(f"Errore nell'invio del messaggio: {response.text}")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000, debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000, debug=True)
