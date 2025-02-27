@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "caffe-duomo",
+  "private_key_id": "57f9479ff87351a84cd085e12f13d435286d3be6",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC4TmCyxA9Z9PbC\n13BLEMamw7PtPCPQEdbtfyy3vfPTFx28yFObTkL727U1v3m5GmH2gzAXF7AI0Y1e\n/uqsovVwQn3YdbI85aWgaueaVmFo5faoq+qK0GNt+4cgtQO917D06OOMsnZeHJeA\n6fQuIBhUsde9cEcDn2ZgF9BpHb1wrOHb20AKnyDYvhW3T8gcwCK0ObjLGTwHZVlU\nflDdfd2MRRmnWStbXCJXVLwZ2z5rA8kfx2/lz6Ii/V43tZkPsJSVzlGjrhm9T/vz\nuu79xiI0us7ZYtbDZIn1bl/fPpshjphJFe+5U+DEeDW2b7hqjiBH7RNriNd9sfk5\nn6mYewF5AgMBAAECggEACgY1SzPPs/BXZYSLNoH8lABr7ljJh90YiAVVPM8njlEh\nDG4G4hkRGpq6EejOqYsuTdaXzIG80NX47vRFdktMtyTerGHGZnqFFiMKYsIU/TwY\nvNbQ5GjuJ4K5OEWwJOiw1rk9+x6PwpGiid/vqHyVZjHgDo0nR6KpUkupSbZU4eZl\nlvPi4zpaw7G5dqloYa3gYecdM8ClS3vM7rJYm7JYc45140mPX53t4OfnXqQoM0pP\neCMbSVJiucAAKji5YBnxbl77TRiqM4f8lr+EWZWOgP9hCqRm6BclBKDzKqZ/usho\nnb+xDFhk/u3J1OpxXO3ZExpmWWQDbGwezA4N/rgEAQKBgQDp4hKvGVb+MTEkzE9u\nX2Y7sffxPeQDuxLDfDy8V2WtXlmJv1/5k2sapeLlihlzQgHEmnsvAjVjC9UoGogi\nkHcgm+JwEYP0IMP/LYbKG3EoDJblgSw2bx4mLOnFFG9iR358IMAzdSTefN5h6SWp\nHKG+YpEAP6EOqyG9/8zCoX4yeQKBgQDJvCDX9q/On1P6HngbLcQMAvmzhglxUDra\n5jR8tm6l5faphyD4hz8ZFdPsbWO4vgg/Tv87lF+aQV7fO4d7P+SPbLHpGzv4/2SD\nmSEkDQkFm6uKHFHzNZGKeWlKxz4VdeakPm7jAp3fmogkHf6X8yocYNrW5Ov/zgkf\nmUhJjZeHAQKBgH1XLNAt8lMTpdSkscTi13UScWAV3Qaq0Ol2wU3mQJVixPVvXE3y\nVSnY0PpWwkDklPH6IB4XPukvxDJT1bVAWrddE0Mf/+lrTd6JVX0mq8Pcy1l/mmQp\ntKyc0UNPKkovKnf3TUnGc9XQcZVjT02MDJptVGwfrX6g89pRJjkANxNxAoGAYGJS\nDtz+Amp9ZPNJzzJ+iH6jbvKLcGg0toFmcm93TiwhPb4iMpvrucCEEGHzU0D4D8de\nisjJJJo3CdEXWfuc6Cm2lvk8HitniriO7PqNZPCLdOEzBlCByPdZJzEqqHY8TBzI\nPg3x//OFODxcd5zmcciUxjd5yi5WjZJex0WvMAECgYAFzffFCTLlcNvZfsRR0hkz\n9bgqxS1Vo9C8ynGd54EA1cnZfT+gmt+y/mujHZmaOqHtkrhLvo+NHm/vC9Z4kH0h\nQrWYGEdV10idQQHOWenzmvZQkFBI/Mdz2HpNGM6k+5d49tEsK1vx2wbzmqqio0eT\nP7cCACSGnNu6KDlewRgeyg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "chatbot-duomo@caffe-duomo.iam.gserviceaccount.com",
+  "client_id": "105035884564716955848",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/chatbot-duomo%40caffe-duomo.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
