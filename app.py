@@ -64,7 +64,7 @@ def handle_messages():
 
                         elif users_state[phone_number]["step"] == "city":
                             users_state[phone_number]["city"] = text
-                            send_whatsapp_message(phone_number, f"Ultima domanda e poi siamo ufficialmente best friends, {text}! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo? ☕🍽️🍹")
+                            send_whatsapp_message(phone_number, f"Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo? ☕🍽️🍹")
                             users_state[phone_number]["step"] = "visit_time"
 
                         elif users_state[phone_number]["step"] == "email":
