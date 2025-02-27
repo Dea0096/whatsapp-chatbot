@@ -69,7 +69,7 @@ def handle_messages():
 
                         elif users_state[phone_number]["step"] == "email":
                             users_state[phone_number]["email"] = text
-                            send_whatsapp_message(phone_number, f"Ecco fatto, {nome}! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
+                            send_whatsapp_message(phone_number, f"Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
                             del users_state[phone_number]  # Reset utente dopo la registrazione
 
                     # Se l'utente scrive "FIDELITY", avvia il flusso
