@@ -1,121 +1,135 @@
-from flask import Flask, request, jsonify
-import requests
 import os
-import re
+import json
+import requests
+from flask import Flask, request
 
 app = Flask(__name__)
 
-# TOKEN DI ACCESSO A META (fissalo in una variabile d'ambiente in futuro)
-ACCESS_TOKEN = "EAAQaZCVgHS2IBO6sH83RDVavhtDHwQljO8tJvqkZBbt4m1AAmLl0ZA5qmmju5UwpqFniyCjrFAr9i2R6ZAZBlHwCcHrO0ny8zbm9VftreZBGEVWoMt4eSSbPZBh6NfdQv2SCDdyDzS60bxN2BFZA9YNTNsTRAQqMRG0UNuGYk3XFVvCee0fEU5GKpfZBIKA7qfCTJx7ZAbibwsXeYPxqbzSO9ChSPLhUisBOUFVlikgZBzZA"
-VERIFY_TOKEN = "whatsapp_verify_token"
+# TOKEN e ID WhatsApp Business
+ACCESS_TOKEN = "INSERISCI_IL_TUO_ACCESS_TOKEN"
+PHONE_NUMBER_ID = "1555172650"
+VERIFY_TOKEN = "fidelity_bot_token"
 
-# URL API WhatsApp
-WHATSAPP_API_URL = "https://graph.facebook.com/v17.0/1555172650/messages"
-
-# MEMORIA TEMPORANEA DEGLI UTENTI CHE HANNO INIZIATO IL FLUSSO
-user_sessions = {}
+# Memoria per utenti registrati
+users = {}
 
 @app.route("/", methods=["GET"])
 def home():
-    return "WhatsApp Bot is Running!"
+    return "Chatbot WhatsApp attivo! 🚀"
 
-# WEBHOOK DI VERIFICA
+# Webhook per la verifica
 @app.route("/webhook", methods=["GET"])
-def verify():
-    """ Verifica il webhook con il token di verifica """
+def verify_webhook():
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
     if mode == "subscribe" and token == VERIFY_TOKEN:
-        return challenge
+        return challenge, 200
     else:
-        return "Verifica fallita", 403
+        return "Errore di verifica", 403
 
-# WEBHOOK PER RICEVERE I MESSAGGI
+# Webhook per la ricezione dei messaggi
 @app.route("/webhook", methods=["POST"])
-def webhook():
-    """ Riceve i messaggi e risponde automaticamente """
-    data = request.get_json()
-    
-    if data and "entry" in data:
-        for entry in data["entry"]:
-            for change in entry["changes"]:
-                if "messages" in change["value"]:
-                    for message in change["value"]["messages"]:
-                        phone_number = message["from"]
-                        text = message.get("text", {}).get("body", "").strip().lower()
+def receive_message():
+    try:
+        data = request.get_json()
+        log("Messaggio ricevuto", data)  # Log dettagliato
 
-                        if not text:
-                            return jsonify({"status": "error", "message": "Messaggio vuoto"}), 200
+        if "entry" in data:
+            for entry in data["entry"]:
+                for change in entry["changes"]:
+                    if "value" in change and "messages" in change["value"]:
+                        messages = change["value"]["messages"]
+                        for message in messages:
+                            user_id = message["from"]
+                            text = message.get("text", {}).get("body", "").strip().lower()
 
-                        # Controllo se l'utente ha già iniziato la chat
-                        if text == "fidelity" and phone_number not in user_sessions:
-                            user_sessions[phone_number] = {"step": 1}  # Inizia il flusso
-                            send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family con la Fidelity Card 🎉 Ti farò qualche domandina per completare l’iscrizione, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo!")
-                        
-                        elif phone_number in user_sessions:
-                            process_user_response(phone_number, text)
-    
-    return jsonify({"status": "received"}), 200
+                            if user_id not in users:
+                                users[user_id] = {"step": "start"}
 
-def process_user_response(phone_number, text):
-    """ Gestisce il flusso della chat fidelity """
-    step = user_sessions[phone_number]["step"]
+                            user_state = users[user_id]["step"]
 
-    if step == 1:
-        send_whatsapp_message(phone_number, "Dimmi il tuo nome e cognome, così posso registrarti correttamente ✨ (Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛)")
-        user_sessions[phone_number]["step"] = 2
+                            if text == "fidelity" and user_state == "start":
+                                users[user_id]["step"] = "ask_name"
+                                send_whatsapp_message(user_id, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family con la Fidelity Card 🎉 Ti farò qualche domandina per completare l’iscrizione, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo!")
+                            
+                            elif user_state == "ask_name":
+                                users[user_id]["name"] = text
+                                users[user_id]["step"] = "ask_birthday"
+                                send_whatsapp_message(user_id, f"Grazie, {text}! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
+                            
+                            elif user_state == "ask_birthday":
+                                users[user_id]["birthday"] = text
+                                users[user_id]["step"] = "ask_city"
+                                send_whatsapp_message(user_id, f"E tu di dove sei, {users[user_id]['name']}? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
+                            
+                            elif user_state == "ask_city":
+                                users[user_id]["city"] = text
+                                users[user_id]["step"] = "ask_visit_time"
+                                send_whatsapp_message_with_buttons(user_id, f"Ultima domanda e poi siamo ufficialmente best friends, {users[user_id]['name']}! 😍 Quando passi più spesso a trovarci?", ["☕ Colazione", "🍽️ Pranzo", "🍹 Aperitivo"])
+                            
+                            elif user_state == "ask_visit_time":
+                                users[user_id]["visit_time"] = text
+                                users[user_id]["step"] = "ask_email"
+                                send_whatsapp_message(user_id, f"Ultima cosa, {users[user_id]['name']}! Se vuoi ricevere offerte e sorprese esclusive, lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
 
-    elif step == 2:
-        user_sessions[phone_number]["name"] = text
-        send_whatsapp_message(phone_number, f"Grazie, {text}! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
-        user_sessions[phone_number]["step"] = 3
+                            elif user_state == "ask_email":
+                                users[user_id]["email"] = text
+                                users[user_id]["step"] = "done"
+                                send_whatsapp_message(user_id, f"Ecco fatto, {users[user_id]['name']}! 🎉 Sei ufficialmente parte della nostra family! La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! ☕🥐🍹💖 A prestissimo! 😘")
 
-    elif step == 3:
-        if not re.match(r"\d{2}/\d{2}/\d{4}", text):
-            send_whatsapp_message(phone_number, f"Oops, {user_sessions[phone_number]['name']}! Sembra che ci sia un piccolo errore nel formato 🧐 Riproviamo? Scrivila così: 15/08/1990 📅")
-        else:
-            user_sessions[phone_number]["birthday"] = text
-            send_whatsapp_message(phone_number, "E tu di dove sei? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
-            user_sessions[phone_number]["step"] = 4
+        return "OK", 200
 
-    elif step == 4:
-        user_sessions[phone_number]["city"] = text
-        send_whatsapp_message(phone_number, "Quando passi più spesso a trovarci? ☕🍽️🍹\n1️⃣ Colazione\n2️⃣ Pranzo\n3️⃣ Aperitivo")
-        user_sessions[phone_number]["step"] = 5
+    except Exception as e:
+        log("Errore", str(e))
+        return "Errore nel server", 500
 
-    elif step == 5:
-        user_sessions[phone_number]["preference"] = text
-        send_whatsapp_message(phone_number, "Vuoi ricevere offerte speciali? Lasciami la tua email 📩 (o scrivi 'no' se non vuoi)")
-        user_sessions[phone_number]["step"] = 6
-
-    elif step == 6:
-        if text.lower() != "no":
-            user_sessions[phone_number]["email"] = text
-        send_whatsapp_message(phone_number, f"Ecco fatto, {user_sessions[phone_number]['name']}! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ A prestissimo! 😘")
-
-        save_user_data(phone_number, user_sessions[phone_number])
-        del user_sessions[phone_number]  # Cancella la sessione dell'utente
-
-def send_whatsapp_message(phone_number, message):
-    """ Invia un messaggio su WhatsApp tramite API di Meta """
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": phone_number,
-        "text": {"body": message}
-    }
+# Funzione per inviare un messaggio di testo su WhatsApp
+def send_whatsapp_message(user_id, text):
+    url = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
-    response = requests.post(WHATSAPP_API_URL, json=payload, headers=headers)
-    return response.json()
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": user_id,
+        "type": "text",
+        "text": {"body": text}
+    }
+    
+    response = requests.post(url, headers=headers, json=payload)
+    log("Risposta WhatsApp", response.json())
 
-def save_user_data(phone_number, user_data):
-    """ Salva i dati dell'utente (da integrare con Google Sheets in futuro) """
-    print(f"📌 Dati utente salvati: {user_data}")
+# Funzione per inviare messaggi con pulsanti
+def send_whatsapp_message_with_buttons(user_id, text, buttons):
+    url = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": user_id,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": text},
+            "action": {
+                "buttons": [{"type": "reply", "reply": {"id": f"btn{i}", "title": btn}} for i, btn in enumerate(buttons)]
+            }
+        }
+    }
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Usa la porta assegnata da Render
-    app.run(host='0.0.0.0', port=port, debug=True)
+    response = requests.post(url, headers=headers, json=payload)
+    log("Risposta WhatsApp con pulsanti", response.json())
+
+# Funzione per loggare gli eventi
+def log(title, data):
+    print(f"\n🔹 {title}: {json.dumps(data, indent=2, ensure_ascii=False)}\n")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
