@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
 import requests
 import os
+import re
 
 app = Flask(__name__)
 
-# TOKEN DI ACCESSO A META
+# TOKEN DI ACCESSO A META (fissalo in una variabile d'ambiente in futuro)
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO6sH83RDVavhtDHwQljO8tJvqkZBbt4m1AAmLl0ZA5qmmju5UwpqFniyCjrFAr9i2R6ZAZBlHwCcHrO0ny8zbm9VftreZBGEVWoMt4eSSbPZBh6NfdQv2SCDdyDzS60bxN2BFZA9YNTNsTRAQqMRG0UNuGYk3XFVvCee0fEU5GKpfZBIKA7qfCTJx7ZAbibwsXeYPxqbzSO9ChSPLhUisBOUFVlikgZBzZA"
 VERIFY_TOKEN = "whatsapp_verify_token"
 
@@ -45,10 +46,13 @@ def webhook():
                         phone_number = message["from"]
                         text = message.get("text", {}).get("body", "").strip().lower()
 
+                        if not text:
+                            return jsonify({"status": "error", "message": "Messaggio vuoto"}), 200
+
                         # Controllo se l'utente ha già iniziato la chat
                         if text == "fidelity" and phone_number not in user_sessions:
                             user_sessions[phone_number] = {"step": 1}  # Inizia il flusso
-                            send_whatsapp_message(phone_number, "Ciao! 🌟 Sei pronto a entrare nel nostro programma Fidelity? Rispondi *sì* per iniziare!")
+                            send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family con la Fidelity Card 🎉 Ti farò qualche domandina per completare l’iscrizione, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo!")
                         
                         elif phone_number in user_sessions:
                             process_user_response(phone_number, text)
@@ -59,36 +63,38 @@ def process_user_response(phone_number, text):
     """ Gestisce il flusso della chat fidelity """
     step = user_sessions[phone_number]["step"]
 
-    if step == 1 and text == "sì":
-        send_whatsapp_message(phone_number, "Fantastico! 🥰 Iniziamo. Come ti chiami? (Nome e Cognome)")
+    if step == 1:
+        send_whatsapp_message(phone_number, "Dimmi il tuo nome e cognome, così posso registrarti correttamente ✨ (Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛)")
         user_sessions[phone_number]["step"] = 2
 
     elif step == 2:
         user_sessions[phone_number]["name"] = text
-        send_whatsapp_message(phone_number, f"Ehi {text}! Hai un soprannome o preferisci usare il tuo nome?")
+        send_whatsapp_message(phone_number, f"Grazie, {text}! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
         user_sessions[phone_number]["step"] = 3
 
     elif step == 3:
-        user_sessions[phone_number]["nickname"] = text if text.lower() != "no" else user_sessions[phone_number]["name"]
-        send_whatsapp_message(phone_number, f"Piacere {user_sessions[phone_number]['nickname']}! 🥰 Ora dimmi, ci vieni più spesso per colazione, pranzo o aperitivo?")
-        user_sessions[phone_number]["step"] = 4
+        if not re.match(r"\d{2}/\d{2}/\d{4}", text):
+            send_whatsapp_message(phone_number, f"Oops, {user_sessions[phone_number]['name']}! Sembra che ci sia un piccolo errore nel formato 🧐 Riproviamo? Scrivila così: 15/08/1990 📅")
+        else:
+            user_sessions[phone_number]["birthday"] = text
+            send_whatsapp_message(phone_number, "E tu di dove sei? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
+            user_sessions[phone_number]["step"] = 4
 
     elif step == 4:
-        user_sessions[phone_number]["preference"] = text
-        send_whatsapp_message(phone_number, "Grazie! Ora un'ultima cosa, qual è il tuo compleanno? (gg/mm)")
+        user_sessions[phone_number]["city"] = text
+        send_whatsapp_message(phone_number, "Quando passi più spesso a trovarci? ☕🍽️🍹\n1️⃣ Colazione\n2️⃣ Pranzo\n3️⃣ Aperitivo")
         user_sessions[phone_number]["step"] = 5
 
     elif step == 5:
-        user_sessions[phone_number]["birthday"] = text
-        send_whatsapp_message(phone_number, "Perfetto! 🎉 Vuoi lasciarmi anche la tua email per ricevere offerte speciali? (Scrivi 'no' se non vuoi)")
+        user_sessions[phone_number]["preference"] = text
+        send_whatsapp_message(phone_number, "Vuoi ricevere offerte speciali? Lasciami la tua email 📩 (o scrivi 'no' se non vuoi)")
         user_sessions[phone_number]["step"] = 6
 
     elif step == 6:
         if text.lower() != "no":
             user_sessions[phone_number]["email"] = text
-        send_whatsapp_message(phone_number, "Grazie mille! 🎊 Sei ufficialmente nel nostro programma Fidelity. Ti aspettiamo al bar! ☕✨")
+        send_whatsapp_message(phone_number, f"Ecco fatto, {user_sessions[phone_number]['name']}! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ A prestissimo! 😘")
 
-        # Qui puoi salvare i dati su Google Sheets o database
         save_user_data(phone_number, user_sessions[phone_number])
         del user_sessions[phone_number]  # Cancella la sessione dell'utente
 
