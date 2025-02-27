@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 from flask import Flask, request
 
 app = Flask(__name__)
@@ -12,13 +12,15 @@ VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 
 # Configurazione Google Sheets
-GOOGLE_SHEETS_JSON = "caffe-duomo-ef40a65a6639.json"  # Nome del file JSON delle credenziali
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del tuo Google Sheet
 SHEET_NAME = "foglio1"  # Nome del foglio dentro il Google Sheets
 
-# Autenticazione con Google Sheets
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_SHEETS_JSON, scope)
+# ✅ Autenticazione con Google Sheets utilizzando variabili d'ambiente
+google_creds_json = os.getenv("GOOGLE_SHEETS_JSON")  # Ottiene la chiave JSON dalle variabili d'ambiente
+creds_dict = json.loads(google_creds_json)  # Converte la stringa JSON in un dizionario Python
+
+# Usa le credenziali per autenticare il client di Google Sheets
+creds = Credentials.from_service_account_info(creds_dict)
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)  # Seleziona il foglio corretto
 
