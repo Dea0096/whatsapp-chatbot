@@ -64,7 +64,7 @@ def handle_messages():
 
                         elif users_state[phone_number]["step"] == "city":
                             users_state[phone_number]["city"] = text
-                            send_whatsapp_message(phone_number, f"Ultima domanda e poi siamo ufficialmente best friends, {nome}! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo? ☕🍽️🍹")
+                            send_whatsapp_message(phone_number, f"Ultima domanda e poi siamo ufficialmente best friends, {text}! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo? ☕🍽️🍹")
                             users_state[phone_number]["step"] = "visit_time"
 
                         elif users_state[phone_number]["step"] == "email":
@@ -75,7 +75,7 @@ def handle_messages():
                     # Se l'utente scrive "FIDELITY", avvia il flusso
                     elif text == "fidelity":
                         users_state[phone_number] = {"step": "name"}
-                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! nome e cognome, così posso registrarti correttamente ✨ (Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! nome e cognome, così posso registrarti correttamente ✨ (Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛)")
     
     return "OK", 200
 
