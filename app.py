@@ -15,12 +15,16 @@ ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVX
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del tuo Google Sheet
 SHEET_NAME = "foglio1"  # Nome del foglio dentro il Google Sheets
 
-# ✅ Autenticazione con Google Sheets utilizzando variabili d'ambiente
+# ✅ Autenticazione con Google Sheets utilizzando variabili d’ambiente e scope corretti
 google_creds_json = os.getenv("GOOGLE_SHEETS_JSON")  # Ottiene la chiave JSON dalle variabili d'ambiente
 creds_dict = json.loads(google_creds_json)  # Converte la stringa JSON in un dizionario Python
 
-# Usa le credenziali per autenticare il client di Google Sheets
-creds = Credentials.from_service_account_info(creds_dict)
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file"
+]
+
+creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)  # Seleziona il foglio corretto
 
