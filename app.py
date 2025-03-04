@@ -2,8 +2,8 @@ import os
 import json
 import requests
 import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, request
-from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
 
@@ -12,26 +12,23 @@ VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 
 # Configurazione Google Sheets
-SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del Google Sheet
-SHEET_NAME = "foglio1"  # Nome del foglio
+GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))  # Legge la chiave dalle variabili d’ambiente
+SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del tuo Google Sheet
+SHEET_NAME = "Foglio1"  # Nome del foglio dentro Google Sheets
 
-# ✅ Caricamento delle credenziali da variabili d'ambiente
-GOOGLE_SHEETS_CREDENTIALS = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
-
-if not GOOGLE_SHEETS_CREDENTIALS:
-    raise ValueError("❌ ERRORE: Credenziali di Google Sheets non trovate nelle variabili d'ambiente.")
-
-# ✅ Caricamento delle credenziali come oggetto JSON
-creds_dict = json.loads(GOOGLE_SHEETS_CREDENTIALS)
+# Autenticazione con Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_SHEETS_JSON, scope)
 client = gspread.authorize(creds)
 
-# ✅ Verifica del foglio di lavoro
-try:
-    sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
-except gspread.exceptions.WorksheetNotFound:
-    raise ValueError(f"❌ ERRORE: Il foglio '{SHEET_NAME}' non esiste nel documento Google Sheets.")
+# Verifica se il foglio esiste, altrimenti usa il primo disponibile
+spreadsheet = client.open_by_key(SPREADSHEET_ID)
+sheets_list = [sheet.title for sheet in spreadsheet.worksheets()]
+if SHEET_NAME not in sheets_list:
+    SHEET_NAME = sheets_list[0]  # Usa il primo foglio disponibile
+    print(f"⚠️ ATTENZIONE: Il foglio '{SHEET_NAME}' non esiste, uso '{SHEET_NAME}'.")
+
+sheet = spreadsheet.worksheet(SHEET_NAME)  # Seleziona il foglio corretto
 
 # Stato utenti temporaneo
 users_state = {}
@@ -47,7 +44,7 @@ def save_to_google_sheets(user_data):
         user_data.get("email", "Sconosciuto"),
     ]
     sheet.append_row(row)
-    print(f"✅ Dati salvati su Google Sheets: {row}")
+    print(f"Dati salvati su Google Sheets: {row}")
 
 def send_whatsapp_message(phone_number, message):
     """Invia un messaggio su WhatsApp"""
@@ -83,34 +80,34 @@ def handle_messages():
 
                         if user["step"] == "name":
                             user["name"] = text
-                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
+                            send_whatsapp_message(phone_number, f"Grazie, {text}! Ora dimmi la tua data di nascita in formato GG/MM/AAAA 🎂✨")
                             user["step"] = "birthday"
 
                         elif user["step"] == "birthday":
                             user["birthday"] = text
-                            send_whatsapp_message(phone_number, "E tu di dove sei? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
+                            send_whatsapp_message(phone_number, "Di dove sei? 🏡 Dimmi la tua città! 🚗✨")
                             user["step"] = "city"
 
                         elif user["step"] == "city":
                             user["city"] = text
-                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕🍽️🍹?")
+                            send_whatsapp_message(phone_number, "Quando passi più spesso da noi? ☕🍽️🍹 (Colazione, Pranzo o Aperitivo)")
                             user["step"] = "visit_time"
 
                         elif user["step"] == "visit_time":
                             user["visit_time"] = text
-                            send_whatsapp_message(phone_number, "Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
+                            send_whatsapp_message(phone_number, "Se vuoi ricevere offerte esclusive, lasciami la tua email 📩 (opzionale)")
                             user["step"] = "email"
 
                         elif user["step"] == "email":
                             user["email"] = text if "@" in text and "." in text else "Sconosciuto"
                             user["id_utente"] = f"ID-{phone_number[-6:]}"  # Genera un ID utente semplice
                             save_to_google_sheets(user)
-                            send_whatsapp_message(phone_number, "Grazie ancora! A prestissimo! ☕🤗💖")
+                            send_whatsapp_message(phone_number, f"Perfetto, {user['name']}! 🎉 Sei nella nostra family! 💛")
                             del users_state[phone_number]  # Reset
 
                     elif text == "fidelity":
                         users_state[phone_number] = {"step": "name"}
-                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+                        send_whatsapp_message(phone_number, "Ehi! 🥰 Dimmi il tuo nome e cognome ✨")
 
     return "OK", 200
 
