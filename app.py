@@ -40,7 +40,7 @@ def save_to_google_sheets(user_data):
     row = [
         "", "", "", "", user_data.get("name", "Sconosciuto"), "",
         user_data.get("birthday", "Sconosciuto"), "", user_data.get("city", "Sconosciuto"),
-        "", "", "", user_data.get("id_utente", "Sconosciuto"), user_data.get("email", "Sconosciuto"),
+        "", "Italia", user_data.get("id_utente", "Sconosciuto"), user_data.get("email", "Sconosciuto"),
         "", today_date, "Chat WhatsApp"
     ]
     sheet.append_row(row)
@@ -80,29 +80,29 @@ def handle_messages():
 
                         if user["step"] == "name":
                             user["name"] = text
-                            send_whatsapp_message(phone_number, "Grazie! Ora dimmi la tua data di nascita in formato GG/MM/AAAA 🎂✨")
+                            send_whatsapp_message(phone_number, f"Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
                             user["step"] = "birthday"
 
                         elif user["step"] == "birthday":
                             user["birthday"] = text
-                            send_whatsapp_message(phone_number, "Di dove sei? 🏡 Dimmi la tua città! 🚗✨")
+                            send_whatsapp_message(phone_number, "E tu di dove sei? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
                             user["step"] = "city"
 
                         elif user["step"] == "city":
                             user["city"] = text
-                            send_whatsapp_message(phone_number, "Quando passi più spesso da noi? ☕🍽️🍹 (Colazione, Pranzo o Aperitivo)")
+                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕🍽️🍹?")
                             user["step"] = "visit_time"
 
                         elif user["step"] == "visit_time":
                             user["visit_time"] = text
-                            send_whatsapp_message(phone_number, "Se vuoi ricevere offerte esclusive, lasciami la tua email 📩 (opzionale)")
+                            send_whatsapp_message(phone_number, "Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
                             user["step"] = "email"
 
                         elif user["step"] == "email":
                             user["email"] = text if "@" in text and "." in text else "Sconosciuto"
                             user["id_utente"] = phone_number  # Usa il numero di telefono come ID
                             save_to_google_sheets(user)
-                            send_whatsapp_message(phone_number, "Perfetto! 🎉 Sei nella nostra family! 💛")
+                            send_whatsapp_message(phone_number, "Grazie ancora! ☕🥐💖 A prestissimo!")
                             del users_state[phone_number]  # Reset
 
                     elif text == "fidelity":
@@ -110,7 +110,7 @@ def handle_messages():
                             send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
                         else:
                             users_state[phone_number] = {"step": "name"}
-                            send_whatsapp_message(phone_number, "Ehi! 🥰 Dimmi il tuo nome e cognome ✨")
+                            send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
 
     return "OK", 200
 
