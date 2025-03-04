@@ -2,8 +2,8 @@ import os
 import json
 import requests
 import gspread
-from google.oauth2.service_account import Credentials
 from flask import Flask, request
+from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
 
@@ -12,14 +12,26 @@ VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 
 # Configurazione Google Sheets
-GOOGLE_SHEETS_CREDENTIALS = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
-SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
-SHEET_NAME = "foglio1"
+SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del Google Sheet
+SHEET_NAME = "foglio1"  # Nome del foglio
 
-# Autenticazione con Google Sheets
-creds = Credentials.from_service_account_info(GOOGLE_SHEETS_CREDENTIALS)
+# ✅ Caricamento delle credenziali da variabili d'ambiente
+GOOGLE_SHEETS_CREDENTIALS = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
+
+if not GOOGLE_SHEETS_CREDENTIALS:
+    raise ValueError("❌ ERRORE: Credenziali di Google Sheets non trovate nelle variabili d'ambiente.")
+
+# ✅ Caricamento delle credenziali come oggetto JSON
+creds_dict = json.loads(GOOGLE_SHEETS_CREDENTIALS)
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 client = gspread.authorize(creds)
-sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+
+# ✅ Verifica del foglio di lavoro
+try:
+    sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+except gspread.exceptions.WorksheetNotFound:
+    raise ValueError(f"❌ ERRORE: Il foglio '{SHEET_NAME}' non esiste nel documento Google Sheets.")
 
 # Stato utenti temporaneo
 users_state = {}
@@ -35,7 +47,7 @@ def save_to_google_sheets(user_data):
         user_data.get("email", "Sconosciuto"),
     ]
     sheet.append_row(row)
-    print(f"Dati salvati su Google Sheets: {row}")
+    print(f"✅ Dati salvati su Google Sheets: {row}")
 
 def send_whatsapp_message(phone_number, message):
     """Invia un messaggio su WhatsApp"""
@@ -71,7 +83,7 @@ def handle_messages():
 
                         if user["step"] == "name":
                             user["name"] = text
-                            send_whatsapp_message(phone_number, f"Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
+                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
                             user["step"] = "birthday"
 
                         elif user["step"] == "birthday":
@@ -81,7 +93,7 @@ def handle_messages():
 
                         elif user["step"] == "city":
                             user["city"] = text
-                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo☕🍽️🍹?")
+                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕🍽️🍹?")
                             user["step"] = "visit_time"
 
                         elif user["step"] == "visit_time":
@@ -93,7 +105,7 @@ def handle_messages():
                             user["email"] = text if "@" in text and "." in text else "Sconosciuto"
                             user["id_utente"] = f"ID-{phone_number[-6:]}"  # Genera un ID utente semplice
                             save_to_google_sheets(user)
-                            send_whatsapp_message(phone_number, "Grazie ancora! ☕🥐💖 A prestissimo!")
+                            send_whatsapp_message(phone_number, "Grazie ancora! A prestissimo! ☕🤗💖")
                             del users_state[phone_number]  # Reset
 
                     elif text == "fidelity":
