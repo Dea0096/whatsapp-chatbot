@@ -4,6 +4,7 @@ import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, request
+from datetime import datetime  # Import per la data di creazione
 
 app = Flask(__name__)
 
@@ -34,14 +35,26 @@ sheet = spreadsheet.worksheet(SHEET_NAME)  # Seleziona il foglio corretto
 users_state = {}
 
 def save_to_google_sheets(user_data):
-    """Salva i dati nel Google Sheet"""
+    """Salva i dati nel Google Sheet in formato compatibile con Cassa in Cloud."""
+    today_date = datetime.today().strftime('%Y-%m-%d')  # Data del giorno reale
     row = [
-        user_data.get("id_utente", "Sconosciuto"),
-        user_data.get("name", "Sconosciuto"),
-        user_data.get("birthday", "Sconosciuto"),
-        user_data.get("city", "Sconosciuto"),
-        user_data.get("visit_time", "Sconosciuto"),
-        user_data.get("email", "Sconosciuto"),
+        "",  # ID lasciato vuoto
+        "",  # P.IVA Azienda (non disponibile)
+        "",  # P.IVA (non disponibile)
+        "",  # C.F. (non disponibile)
+        user_data.get("name", "Sconosciuto"),  # Nominativo
+        "",  # Sesso (non disponibile)
+        user_data.get("birthday", "Sconosciuto"),  # Data di Nascita
+        "",  # Via e numero civico (non disponibile)
+        user_data.get("city", "Sconosciuto"),  # Città
+        "",  # CAP (non disponibile)
+        "",  # Provincia (non disponibile)
+        "",  # Stato (non disponibile)
+        user_data.get("id_utente", "Sconosciuto"),  # Telefono (ID utente)
+        user_data.get("email", "Sconosciuto"),  # Email
+        "",  # Sconti (non disponibile)
+        today_date,  # Data Creazione (data reale)
+        "Chat WhatsApp"  # Canale di Attivazione
     ]
     sheet.append_row(row)
     print(f"Dati salvati su Google Sheets: {row}")
@@ -80,34 +93,34 @@ def handle_messages():
 
                         if user["step"] == "name":
                             user["name"] = text
-                            send_whatsapp_message(phone_number, f"Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
+                            send_whatsapp_message(phone_number, "Grazie! Ora dimmi la tua data di nascita in formato GG/MM/AAAA 🎂✨")
                             user["step"] = "birthday"
 
                         elif user["step"] == "birthday":
                             user["birthday"] = text
-                            send_whatsapp_message(phone_number, "E tu di dove sei? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
+                            send_whatsapp_message(phone_number, "Di dove sei? 🏡 Dimmi la tua città! 🚗✨")
                             user["step"] = "city"
 
                         elif user["step"] == "city":
                             user["city"] = text
-                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕🍽️🍹?")
+                            send_whatsapp_message(phone_number, "Quando passi più spesso da noi? ☕🍽️🍹 (Colazione, Pranzo o Aperitivo)")
                             user["step"] = "visit_time"
 
                         elif user["step"] == "visit_time":
                             user["visit_time"] = text
-                            send_whatsapp_message(phone_number, "Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
+                            send_whatsapp_message(phone_number, "Se vuoi ricevere offerte esclusive, lasciami la tua email 📩 (opzionale)")
                             user["step"] = "email"
 
                         elif user["step"] == "email":
                             user["email"] = text if "@" in text and "." in text else "Sconosciuto"
                             user["id_utente"] = f"ID-{phone_number[-6:]}"  # Genera un ID utente semplice
                             save_to_google_sheets(user)
-                            send_whatsapp_message(phone_number, "Grazie ancora! ☕🥐💖 A prestissimo!")
+                            send_whatsapp_message(phone_number, "Perfetto! 🎉 Sei nella nostra family! 💛")
                             del users_state[phone_number]  # Reset
 
                     elif text == "fidelity":
                         users_state[phone_number] = {"step": "name"}
-                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+                        send_whatsapp_message(phone_number, "Ehi! 🥰 Dimmi il tuo nome e cognome ✨")
 
     return "OK", 200
 
