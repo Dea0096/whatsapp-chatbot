@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import gspread
-from google.oauth2.service_account import Credentials
+from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, request
 
 app = Flask(__name__)
@@ -12,27 +12,23 @@ VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 
 # Configurazione Google Sheets
-SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
-SHEET_NAME = "foglio1"  # Verifica che il nome sia corretto!
+GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))  # Legge la chiave dalle variabili d’ambiente
+SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del tuo Google Sheet
+SHEET_NAME = "Foglio1"  # Nome del foglio dentro Google Sheets
 
-# ✅ Autenticazione con Google Sheets
-google_creds_json = os.getenv("GOOGLE_SHEETS_JSON")  # Ottiene la chiave JSON dalle variabili d'ambiente
-creds_dict = json.loads(google_creds_json)  # Converte la stringa JSON in un dizionario
-
-scope = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive.file"
-]
-
-creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+# Autenticazione con Google Sheets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_SHEETS_JSON, scope)
 client = gspread.authorize(creds)
 
-# ✅ Correggiamo il problema del foglio mancante
-try:
-    sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)  # Seleziona il foglio corretto
-except gspread.exceptions.WorksheetNotFound:
-    sheet = client.open_by_key(SPREADSHEET_ID).sheet1  # Seleziona il primo foglio disponibile
-    print("⚠️ ATTENZIONE: Il foglio specificato non esiste! Utilizzo il primo foglio disponibile.")
+# Verifica se il foglio esiste, altrimenti usa il primo disponibile
+spreadsheet = client.open_by_key(SPREADSHEET_ID)
+sheets_list = [sheet.title for sheet in spreadsheet.worksheets()]
+if SHEET_NAME not in sheets_list:
+    SHEET_NAME = sheets_list[0]  # Usa il primo foglio disponibile
+    print(f"⚠️ ATTENZIONE: Il foglio '{SHEET_NAME}' non esiste, uso '{SHEET_NAME}'.")
+
+sheet = spreadsheet.worksheet(SHEET_NAME)  # Seleziona il foglio corretto
 
 # Stato utenti temporaneo
 users_state = {}
@@ -116,5 +112,5 @@ def handle_messages():
     return "OK", 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))  # Assicura che venga usata la porta di Render
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=True)
