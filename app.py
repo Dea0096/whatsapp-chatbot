@@ -13,9 +13,9 @@ VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 
 # Configurazione Google Sheets
-GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))  # Legge la chiave dalle variabili d’ambiente
-SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del tuo Google Sheet
-SHEET_NAME = "Foglio1"  # Nome del foglio dentro Google Sheets
+GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
+SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
+SHEET_NAME = "Foglio1"
 
 # Autenticazione con Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -24,50 +24,24 @@ client = gspread.authorize(creds)
 
 # Verifica se il foglio esiste, altrimenti usa il primo disponibile
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
-sheets_list = [sheet.title for sheet in spreadsheet.worksheets()]
-if SHEET_NAME not in sheets_list:
-    SHEET_NAME = sheets_list[0]  # Usa il primo foglio disponibile
-    print(f"⚠️ ATTENZIONE: Il foglio '{SHEET_NAME}' non esiste, uso '{SHEET_NAME}'.")
-
-sheet = spreadsheet.worksheet(SHEET_NAME)  # Seleziona il foglio corretto
-
-# Intestazioni corrette per compatibilità con Cassa in Cloud
-HEADERS = [
-    "ID", "P.IVA Azienda", "P.IVA", "C.F.", "Nominativo", "Sesso", "Data di Nascita",
-    "Via e numero civico", "Città", "CAP", "Provincia", "Stato", "Telefono",
-    "Email", "Sconti", "Data Creazione", "Canale di Attivazione"
-]
-
-# Verifica e scrive le intestazioni se non presenti
-existing_headers = sheet.row_values(1)
-if existing_headers != HEADERS:
-    sheet.insert_row(HEADERS, index=1)
-    print("✔️ Intestazioni aggiunte/corrette.")
+sheet = spreadsheet.worksheet(SHEET_NAME)
 
 # Stato utenti temporaneo
 users_state = {}
 
+def user_already_registered(phone_number):
+    """Verifica se l'utente è già registrato nel Google Sheet."""
+    phone_numbers = sheet.col_values(13)  # Colonna "Telefono"
+    return phone_number in phone_numbers
+
 def save_to_google_sheets(user_data):
     """Salva i dati nel Google Sheet in formato compatibile con Cassa in Cloud."""
-    today_date = datetime.today().strftime('%Y-%m-%d')  # Data del giorno reale
+    today_date = datetime.today().strftime('%Y-%m-%d')  # Data reale
     row = [
-        "",  # ID lasciato vuoto per Cassa in Cloud
-        "",  # P.IVA Azienda
-        "",  # P.IVA
-        "",  # C.F.
-        user_data.get("name", "Sconosciuto"),  # Nominativo
-        "",  # Sesso
-        user_data.get("birthday", "Sconosciuto"),  # Data di Nascita
-        "",  # Via e numero civico
-        user_data.get("city", "Sconosciuto"),  # Città
-        "",  # CAP
-        "",  # Provincia
-        "",  # Stato
-        user_data.get("id_utente", "Sconosciuto"),  # Telefono
-        user_data.get("email", "Sconosciuto"),  # Email
-        "",  # Sconti
-        today_date,  # Data Creazione (data reale)
-        "Chat WhatsApp"  # Canale di Attivazione
+        "", "", "", "", user_data.get("name", "Sconosciuto"), "",
+        user_data.get("birthday", "Sconosciuto"), "", user_data.get("city", "Sconosciuto"),
+        "", "", "", user_data.get("id_utente", "Sconosciuto"), user_data.get("email", "Sconosciuto"),
+        "", today_date, "Chat WhatsApp"
     ]
     sheet.append_row(row)
     print(f"Dati salvati su Google Sheets: {row}")
@@ -126,14 +100,17 @@ def handle_messages():
 
                         elif user["step"] == "email":
                             user["email"] = text if "@" in text and "." in text else "Sconosciuto"
-                            user["id_utente"] = f"ID-{phone_number[-6:]}"  # Genera un ID utente semplice
+                            user["id_utente"] = phone_number  # Usa il numero di telefono come ID
                             save_to_google_sheets(user)
                             send_whatsapp_message(phone_number, "Perfetto! 🎉 Sei nella nostra family! 💛")
                             del users_state[phone_number]  # Reset
 
                     elif text == "fidelity":
-                        users_state[phone_number] = {"step": "name"}
-                        send_whatsapp_message(phone_number, "Ehi! 🥰 Dimmi il tuo nome e cognome ✨")
+                        if user_already_registered(phone_number):
+                            send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
+                        else:
+                            users_state[phone_number] = {"step": "name"}
+                            send_whatsapp_message(phone_number, "Ehi! 🥰 Dimmi il tuo nome e cognome ✨")
 
     return "OK", 200
 
