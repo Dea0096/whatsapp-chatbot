@@ -12,12 +12,12 @@ VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 
 # Configurazione Google Sheets
-SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"  # ID del tuo Google Sheet
-SHEET_NAME = "foglio1"  # Nome del foglio dentro il Google Sheets
+SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
+SHEET_NAME = "foglio1"  # Verifica che il nome sia corretto!
 
-# ✅ Autenticazione con Google Sheets utilizzando variabili d’ambiente e scope corretti
+# ✅ Autenticazione con Google Sheets
 google_creds_json = os.getenv("GOOGLE_SHEETS_JSON")  # Ottiene la chiave JSON dalle variabili d'ambiente
-creds_dict = json.loads(google_creds_json)  # Converte la stringa JSON in un dizionario Python
+creds_dict = json.loads(google_creds_json)  # Converte la stringa JSON in un dizionario
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -26,7 +26,13 @@ scope = [
 
 creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 client = gspread.authorize(creds)
-sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)  # Seleziona il foglio corretto
+
+# ✅ Correggiamo il problema del foglio mancante
+try:
+    sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)  # Seleziona il foglio corretto
+except gspread.exceptions.WorksheetNotFound:
+    sheet = client.open_by_key(SPREADSHEET_ID).sheet1  # Seleziona il primo foglio disponibile
+    print("⚠️ ATTENZIONE: Il foglio specificato non esiste! Utilizzo il primo foglio disponibile.")
 
 # Stato utenti temporaneo
 users_state = {}
@@ -110,5 +116,5 @@ def handle_messages():
     return "OK", 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 10000))  # Assicura che venga usata la porta di Render
     app.run(host='0.0.0.0', port=port, debug=True)
