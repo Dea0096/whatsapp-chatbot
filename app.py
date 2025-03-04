@@ -4,7 +4,7 @@ import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, request
-from datetime import datetime  # Import per la data di creazione
+from datetime import datetime  # Per la data di creazione
 
 app = Flask(__name__)
 
@@ -31,6 +31,19 @@ if SHEET_NAME not in sheets_list:
 
 sheet = spreadsheet.worksheet(SHEET_NAME)  # Seleziona il foglio corretto
 
+# Intestazioni corrette per compatibilità con Cassa in Cloud
+HEADERS = [
+    "ID", "P.IVA Azienda", "P.IVA", "C.F.", "Nominativo", "Sesso", "Data di Nascita",
+    "Via e numero civico", "Città", "CAP", "Provincia", "Stato", "Telefono",
+    "Email", "Sconti", "Data Creazione", "Canale di Attivazione"
+]
+
+# Verifica e scrive le intestazioni se non presenti
+existing_headers = sheet.row_values(1)
+if existing_headers != HEADERS:
+    sheet.insert_row(HEADERS, index=1)
+    print("✔️ Intestazioni aggiunte/corrette.")
+
 # Stato utenti temporaneo
 users_state = {}
 
@@ -38,21 +51,21 @@ def save_to_google_sheets(user_data):
     """Salva i dati nel Google Sheet in formato compatibile con Cassa in Cloud."""
     today_date = datetime.today().strftime('%Y-%m-%d')  # Data del giorno reale
     row = [
-        "",  # ID lasciato vuoto
-        "",  # P.IVA Azienda (non disponibile)
-        "",  # P.IVA (non disponibile)
-        "",  # C.F. (non disponibile)
+        "",  # ID lasciato vuoto per Cassa in Cloud
+        "",  # P.IVA Azienda
+        "",  # P.IVA
+        "",  # C.F.
         user_data.get("name", "Sconosciuto"),  # Nominativo
-        "",  # Sesso (non disponibile)
+        "",  # Sesso
         user_data.get("birthday", "Sconosciuto"),  # Data di Nascita
-        "",  # Via e numero civico (non disponibile)
+        "",  # Via e numero civico
         user_data.get("city", "Sconosciuto"),  # Città
-        "",  # CAP (non disponibile)
-        "",  # Provincia (non disponibile)
-        "",  # Stato (non disponibile)
-        user_data.get("id_utente", "Sconosciuto"),  # Telefono (ID utente)
+        "",  # CAP
+        "",  # Provincia
+        "",  # Stato
+        user_data.get("id_utente", "Sconosciuto"),  # Telefono
         user_data.get("email", "Sconosciuto"),  # Email
-        "",  # Sconti (non disponibile)
+        "",  # Sconti
         today_date,  # Data Creazione (data reale)
         "Chat WhatsApp"  # Canale di Attivazione
     ]
