@@ -2,41 +2,38 @@ import os
 import json
 import requests
 import gspread
+import logging
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, request
-from datetime import datetime  # Per la data di creazione
+from datetime import datetime
 
 app = Flask(__name__)
 
-# Configurazione del bot WhatsApp
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 
-# Configurazione Google Sheets
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
 SHEET_NAME = "Foglio1"
 
-# Autenticazione con Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(GOOGLE_SHEETS_JSON, scope)
 client = gspread.authorize(creds)
 
-# Verifica se il foglio esiste, altrimenti usa il primo disponibile
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 sheet = spreadsheet.worksheet(SHEET_NAME)
 
-# Stato utenti temporaneo
 users_state = {}
 
 def user_already_registered(phone_number):
-    """Verifica se l'utente è già registrato nel Google Sheet."""
-    phone_numbers = sheet.col_values(13)  # Colonna "Telefono"
+    phone_numbers = sheet.col_values(13)
     return phone_number in phone_numbers
 
 def save_to_google_sheets(user_data):
-    """Salva i dati nel Google Sheet in formato compatibile con Cassa in Cloud."""
-    today_date = datetime.today().strftime('%Y-%m-%d')  # Data reale
+    today_date = datetime.today().strftime('%Y-%m-%d')
     row = [
         "", "", "", "", user_data.get("name", "Sconosciuto"), "",
         user_data.get("birthday", "Sconosciuto"), "", user_data.get("city", "Sconosciuto"),
@@ -44,14 +41,14 @@ def save_to_google_sheets(user_data):
         "", today_date, "Chat WhatsApp"
     ]
     sheet.append_row(row)
-    print(f"Dati salvati su Google Sheets: {row}")
+    logger.info(f"Dati salvati su Google Sheets: {row}")
 
 def send_whatsapp_message(phone_number, message):
-    """Invia un messaggio su WhatsApp"""
-    url = "https://graph.facebook.com/v17.0/598409370016822/messages"
+    url = "https://graph.facebook.com/v17.0/502355696304691/messages"
     headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
     payload = {"messaging_product": "whatsapp", "to": phone_number, "text": {"body": message}}
     response = requests.post(url, headers=headers, json=payload)
+    logger.info(f"Messaggio inviato a {phone_number}: {response.status_code} - {response.text}")
     return response.json()
 
 @app.route('/webhook', methods=['GET'])
@@ -60,12 +57,16 @@ def verify_webhook():
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
     if mode == "subscribe" and token == VERIFY_TOKEN:
+        logger.info("Webhook verificato correttamente.")
         return challenge, 200
+    logger.warning("Tentativo di verifica webhook fallito.")
     return "Forbidden", 403
 
 @app.route('/webhook', methods=['POST'])
 def handle_messages():
     data = request.get_json()
+    logger.info(f"Dati ricevuti: {json.dumps(data)}")
+
     if "entry" in data:
         for entry in data["entry"]:
             for change in entry["changes"]:
@@ -80,7 +81,7 @@ def handle_messages():
 
                         if user["step"] == "name":
                             user["name"] = text
-                            send_whatsapp_message(phone_number, f"Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
+                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
                             user["step"] = "birthday"
 
                         elif user["step"] == "birthday":
@@ -100,10 +101,10 @@ def handle_messages():
 
                         elif user["step"] == "email":
                             user["email"] = text if "@" in text and "." in text else "Sconosciuto"
-                            user["id_utente"] = phone_number  # Usa il numero di telefono come ID
+                            user["id_utente"] = phone_number
                             save_to_google_sheets(user)
                             send_whatsapp_message(phone_number, "Grazie ancora! ☕🥐💖 A prestissimo!")
-                            del users_state[phone_number]  # Reset
+                            del users_state[phone_number]
 
                     elif text == "fidelity":
                         if user_already_registered(phone_number):
@@ -116,4 +117,4 @@ def handle_messages():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
