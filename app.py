@@ -3,6 +3,7 @@ import json
 import requests
 import gspread
 import logging
+import openai
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, request
 from datetime import datetime
@@ -13,7 +14,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBO8CWzOCJyDHbRLENaZCpTH8zv4aZCA6ZBKRMHPl17DZA3qQ1SqYVNzXoNPU4jgyIvHthtZA12KIqpfuXDvg7nl75vm7K0U0LOhegNh2HPVXYZChyYgBI1ndDlKzMHhE6qAVRvYEIQqwZBnwrg3FobkqevUmDtrYlgWHQVZAVEKrz5UEdhYOwnzcIHWte5XhSOI1MbYcMhk2KN6QsFJtVCxmo5JoMaHdZA"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -50,6 +52,21 @@ def send_whatsapp_message(phone_number, message):
     response = requests.post(url, headers=headers, json=payload)
     logger.info(f"Messaggio inviato a {phone_number}: {response.status_code} - {response.text}")
     return response.json()
+
+def chiedi_a_chatgpt(messaggio):
+    try:
+        openai.api_key = OPENAI_API_KEY
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Sei Martino, un chatbot per un bar a Rimini. Rispondi con tono amichevole, professionale e brioso, come se parlassi con un cliente affezionato."},
+                {"role": "user", "content": messaggio}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"Errore da OpenAI: {e}")
+        return "Oops! Qualcosa è andato storto. Prova di nuovo più tardi."
 
 @app.route('/webhook', methods=['GET'])
 def verify_webhook():
@@ -112,6 +129,10 @@ def handle_messages():
                         else:
                             users_state[phone_number] = {"step": "name"}
                             send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+
+                    else:
+                        risposta = chiedi_a_chatgpt(text)
+                        send_whatsapp_message(phone_number, risposta)
 
     return "OK", 200
 
