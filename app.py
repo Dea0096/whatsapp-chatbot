@@ -67,7 +67,7 @@ def handle_messages():
     data = request.get_json()
     logger.info(f"Dati ricevuti: {json.dumps(data)}")
 
-    if "entry" in data:
+    if data and isinstance(data, dict) and "entry" in data:
         for entry in data["entry"]:
             for change in entry["changes"]:
                 value = change.get("value", {})
