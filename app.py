@@ -3,7 +3,6 @@ import json
 import requests
 import gspread
 import logging
-import openai
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, request
 from datetime import datetime
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -65,18 +64,22 @@ def send_whatsapp_message(phone_number, message):
 
 def chiedi_a_chatgpt(messaggio):
     try:
-        openai.api_key = OPENAI_API_KEY
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "openrouter/openai/gpt-3.5-turbo",
+            "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": messaggio}
             ]
-        )
-        return response.choices[0].message.content.strip()
+        }
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+        return response.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        logger.error(f"Errore da OpenAI: {e}")
-        return "Oops! Il cervello di Martino è un po' in tilt... prova più tardi ☕"
+        logger.error(f"Errore da OpenRouter: {e}")
+        return "Oops! Il cervello di Martino è in tilt... riprova più tardi ☕"
 
 @app.route('/webhook', methods=['GET'])
 def verify_webhook():
