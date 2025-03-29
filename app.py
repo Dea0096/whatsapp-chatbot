@@ -94,14 +94,27 @@ def webhook():
             return "", 403
 
     if request.method == 'POST':
-        data = request.json
-        phone_number = data['entry'][0]['changes'][0]['value']['messages'][0]['from']
-        user_message = data['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
+        try:
+            data = request.json
+            entry = data.get('entry', [{}])[0]
+            changes = entry.get('changes', [{}])[0]
+            value = changes.get('value', {})
+            messages = value.get('messages', [])
 
-        risposta = chiedi_a_chatgpt(user_message)
-        send_whatsapp_message(phone_number, risposta)
+            if not messages:
+                logger.warning("Nessun messaggio trovato nella richiesta.")
+                return 'No message', 200
 
-        return 'OK', 200
+            phone_number = messages[0]['from']
+            user_message = messages[0]['text']['body']
+
+            risposta = chiedi_a_chatgpt(user_message)
+            send_whatsapp_message(phone_number, risposta)
+
+            return 'OK', 200
+        except Exception as e:
+            logger.error(f"Errore nel processing del messaggio: {e}")
+            return 'Errore interno', 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
