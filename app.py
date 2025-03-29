@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBOzdYUToHdv3BmDCQZAoMTBZC8nl9UQe3V7FgasFM8x12CymcZBsAMkmv9ca7iHtl8vfVn4icZBhHahG5N9hPPOZAvyHU5GHUkwr43ZCo9biIZAhOx8NEPVSOnCnjsXnk93FVRjwGAaWyZCOOTc5wtzZCeZAdS47XVNnCHwgpC73emRrBHyyCIHsL5jeZAxhyhPpTZAU24b7ecHerEbsxEcSAMENjPwT3Kans"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO9kepyPNjfI6S2ekxwgx9hZCTpgghzFCGQd9eNqr1fLEPWzzVXhPZBulKtN4bOy6PNwtuQd4irxp7IaSNSNCqBOVscHAORJnCbE7uvfEVNDNbzRRYq56YVX7Jqdq8fpeJhuZC7tfy39tWEQDcjSCW3t85kvznOxhrTkpusRS2ZCEZCaicWg5DYkmMkgZDZD"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
@@ -76,7 +76,13 @@ def chiedi_a_chatgpt(messaggio):
             ]
         }
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-        return response.json()["choices"][0]["message"]["content"].strip()
+        data = response.json()
+
+        if "choices" in data and len(data["choices"]) > 0:
+            return data["choices"][0]["message"]["content"].strip()
+        else:
+            logger.error(f"Risposta inattesa da OpenRouter: {data}")
+            return "Mi sa che oggi ho bisogno di un altro caffè per ragionare 😅 Riproviamo tra poco?"
     except Exception as e:
         logger.error(f"Errore da OpenRouter: {e}")
         return "Oops! Il cervello di Martino è in tilt... riprova più tardi ☕"
@@ -112,7 +118,7 @@ def handle_messages():
 
                         if user["step"] == "name":
                             user["name"] = text
-                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🏱")
+                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🍱")
                             user["step"] = "birthday"
 
                         elif user["step"] == "birthday":
@@ -122,7 +128,7 @@ def handle_messages():
 
                         elif user["step"] == "city":
                             user["city"] = text
-                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕🍽️🍹?")
+                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕️🍽️🍹?")
                             user["step"] = "visit_time"
 
                         elif user["step"] == "visit_time":
@@ -134,12 +140,12 @@ def handle_messages():
                             user["email"] = text if "@" in text and "." in text else "Sconosciuto"
                             user["id_utente"] = phone_number
                             save_to_google_sheets(user)
-                            send_whatsapp_message(phone_number, "Grazie ancora! ☕🥐💖 A prestissimo!")
+                            send_whatsapp_message(phone_number, "Grazie ancora! ☕️🥐💖 A prestissimo!")
                             del users_state[phone_number]
 
                     elif "fidelity" in lower_text or "registr" in lower_text:
                         if user_already_registered(phone_number):
-                            send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
+                            send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕️💛")
                         else:
                             users_state[phone_number] = {"step": "name"}
                             send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
