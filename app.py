@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBO63WYZAc1uIJK2knaZBzRtj7AGjZCPscS6ZBrIZBsLcmS7hZAXiPVVG8kypXdzPMvAbZAHhG1ZB3JaeiuvPq7O8ClywCRJaOtwlsFPzoysoxyMZBCN1PNimpZCXoYjeoHmP1oCN2CX42a9yKaMKKhBbcTxSvCw02TzVZABw66qEm3QrJfhkOGECVjOfESOpenxSxZC6W8PQE6kthGvDCxq433bTIP6jqZBDf3"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "mistralai/mistral-7b-instruct"
+OPENROUTER_MODEL = "google/gemini-2.5-pro-exp-03-25"
+
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
