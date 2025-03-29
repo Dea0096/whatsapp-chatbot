@@ -89,4 +89,6 @@ def chiedi_a_chatgpt(messaggio):
         logger.error(f"Errore da OpenRouter: {e}")
         return "Oops! Il cervello di Martino è in tilt... riprova più tardi ☕"
 
-# resto del codice invariato...
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(debug=False, host="0.0.0.0", port=port)
