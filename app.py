@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBOzdYUToHdv3BmDCQZAoMTBZC8nl9UQe3V7FgasFM8x12CymcZBsAMkmv9ca7iHtl8vfVn4icZBhHahG5N9hPPOZAvyHU5GHUkwr43ZCo9biIZAhOx8NEPVSOnCnjsXnk93FVRjwGAaWyZCOOTc5wtzZCeZAdS47XVNnCHwgpC73emRrBHyyCIHsL5jeZAxhyhPpTZAU24b7ecHerEbsxEcSAMENjPwT3Kans"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO63WYZAc1uIJK2knaZBzRtj7AGjZCPscS6ZBrIZBsLcmS7hZAXiPVVG8kypXdzPMvAbZAHhG1ZB3JaeiuvPq7O8ClywCRJaOtwlsFPzoysoxyMZBCN1PNimpZCXoYjeoHmP1oCN2CX42a9yKaMKKhBbcTxSvCw02TzVZABw66qEm3QrJfhkOGECVjOfESOpenxSxZC6W8PQE6kthGvDCxq433bTIP6jqZBDf3"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = "mistralai/mistral-7b-instruct"
 
@@ -28,8 +28,6 @@ client = gspread.authorize(creds)
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 sheet = spreadsheet.worksheet(SHEET_NAME)
 
-users_state = {}
-
 SYSTEM_PROMPT = (
     "Sei Martino, il chatbot ufficiale del Caffè Duomo, bar storico di Rimini. Parli su WhatsApp in modo naturale, simpatico, ironico ma educato. \n"
     "Rispondi come se fossi il barista amico di tutti: breve, umano, coinvolgente. \n"
@@ -39,10 +37,6 @@ SYSTEM_PROMPT = (
     "Esempio: 'posso iscrivermi?' → guida alla registrazione. 'Che fate stasera?' → parli degli eventi. \n"
     "Alla fine, se ci sta, puoi chiudere con una battuta o un invito amichevole."
 )
-
-def user_already_registered(phone_number):
-    phone_numbers = sheet.col_values(13)
-    return phone_number in phone_numbers
 
 def save_to_google_sheets(user_data):
     today_date = datetime.today().strftime('%Y-%m-%d')
@@ -88,6 +82,30 @@ def chiedi_a_chatgpt(messaggio):
     except Exception as e:
         logger.error(f"Errore da OpenRouter: {e}")
         return "Oops! Il cervello di Martino è in tilt... riprova più tardi ☕"
+
+@app.route('/webhook', methods=['GET', 'POST'])
+def webhook():
+    if request.method == 'GET':
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+
+        if mode == 'subscribe' and token == VERIFY_TOKEN:
+            logger.info("Webhook verificato con successo.")
+            return challenge, 200
+        else:
+            logger.warning("Tentativo di verifica webhook fallito.")
+            return "", 403
+
+    if request.method == 'POST':
+        data = request.json
+        phone_number = data['entry'][0]['changes'][0]['value']['messages'][0]['from']
+        user_message = data['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
+
+        risposta = chiedi_a_chatgpt(user_message)
+        send_whatsapp_message(phone_number, risposta)
+
+        return 'OK', 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
