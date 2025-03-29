@@ -13,9 +13,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBOzdYUToHdv3BmDCQZAoMTBZC8nl9UQe3V7FgasFM8x12CymcZBsAMkmv9ca7iHtl8vfVn4icZBhHahG5N9hPPOZAvyHU5GHUkwr43ZCo9biIZAhOx8NEPVSOnCnjsXnk93FVRjwGAaWyZCOOTc5wtzZCeZAdS47XVNnCHwgpC73emRrBHyyCIHsL5jeZAxhyhPpTZAU24b7ecHerEbsxEcSAMENjPwT3Kans"
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "mistralai/mistral-7b-instruct"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO22VBKTaCIp7uWrHpSW2NNwaG7cnEkfo2jsWMZCmJ9ZB3HVU8PhXPVbOpmpHi10XiVD24OJcXDdG5ty2mSSMsLpQtftVFtnrZC7OZBQZCw8J1fPHtVg60ZA28wz80i6PvUHvtohdyN5E2GSM4khwsVGeZBEdQNxrVZCH9qZBu76j2r7hOfKFF90HPrqLINd3AdwQ4z1zJdvdRZCOqfLE90Cpypik0vc9RrrwZDZD"
+HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -29,12 +28,12 @@ spreadsheet = client.open_by_key(SPREADSHEET_ID)
 sheet = spreadsheet.worksheet(SHEET_NAME)
 
 SYSTEM_PROMPT = (
-    "Sei Martino, il chatbot ufficiale del Caffè Duomo, bar storico di Rimini. Parli su WhatsApp in modo naturale, simpatico, ironico ma educato. \n"
-    "Rispondi come se fossi il barista amico di tutti: breve, umano, coinvolgente. \n"
+    "Sei Martino, il chatbot ufficiale del Caffè Duomo, bar storico di Rimini. Parli su WhatsApp in modo naturale, simpatico, ironico ma educato.\n"
+    "Rispondi come se fossi il barista amico di tutti: breve, umano, coinvolgente.\n"
     "Rispetti il contesto: parli solo di fidelity card, prenotazioni, orari, menu, offerte, eventi o informazioni legate al bar.\n"
     "Usi emoji con naturalezza e senza esagerare. Non sei un bot qualunque. Sei Martino.\n"
-    "Quando ricevi una domanda non chiara, chiedi conferma con garbo. \n"
-    "Esempio: 'posso iscrivermi?' → guida alla registrazione. 'Che fate stasera?' → parli degli eventi. \n"
+    "Quando ricevi una domanda non chiara, chiedi conferma con garbo.\n"
+    "Esempio: 'posso iscrivermi?' → guida alla registrazione. 'Che fate stasera?' → parli degli eventi.\n"
     "Alla fine, se ci sta, puoi chiudere con una battuta o un invito amichevole."
 )
 
@@ -60,27 +59,27 @@ def send_whatsapp_message(phone_number, message):
 def chiedi_a_chatgpt(messaggio):
     try:
         headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "HTTP-Referer": "https://openrouter.ai",
+            "Authorization": f"Bearer {HUGGING_FACE_API_KEY}",
             "Content-Type": "application/json"
         }
         payload = {
-            "model": OPENROUTER_MODEL,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": messaggio}
-            ]
+            "inputs": f"{SYSTEM_PROMPT}\nUtente: {messaggio}\nMartino:",
+            "parameters": {"max_new_tokens": 200, "return_full_text": False}
         }
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+            headers=headers,
+            json=payload
+        )
         data = response.json()
 
-        if "choices" in data and len(data["choices"]) > 0:
-            return data["choices"][0]["message"]["content"].strip()
+        if isinstance(data, list) and len(data) > 0 and 'generated_text' in data[0]:
+            return data[0]['generated_text'].strip()
         else:
-            logger.error(f"Risposta inattesa da OpenRouter: {data}")
+            logger.error(f"Risposta inattesa da HuggingFace: {data}")
             return "Mi sa che oggi ho bisogno di un altro caffè per ragionare 😅 Riproviamo tra poco?"
     except Exception as e:
-        logger.error(f"Errore da OpenRouter: {e}")
+        logger.error(f"Errore da HuggingFace: {e}")
         return "Oops! Il cervello di Martino è in tilt... riprova più tardi ☕"
 
 @app.route('/webhook', methods=['GET', 'POST'])
