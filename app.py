@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 VERIFY_TOKEN = "mio_verification_token"
 ACCESS_TOKEN = "EAAQaZCVgHS2IBOzdYUToHdv3BmDCQZAoMTBZC8nl9UQe3V7FgasFM8x12CymcZBsAMkmv9ca7iHtl8vfVn4icZBhHahG5N9hPPOZAvyHU5GHUkwr43ZCo9biIZAhOx8NEPVSOnCnjsXnk93FVRjwGAaWyZCOOTc5wtzZCeZAdS47XVNnCHwgpC73emRrBHyyCIHsL5jeZAxhyhPpTZAU24b7ecHerEbsxEcSAMENjPwT3Kans"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = "mistralai/mistral-7b-instruct"
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -66,10 +67,11 @@ def chiedi_a_chatgpt(messaggio):
     try:
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "HTTP-Referer": "https://openrouter.ai",
             "Content-Type": "application/json"
         }
         payload = {
-            "model": "openrouter/openai/gpt-3.5-turbo",
+            "model": OPENROUTER_MODEL,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": messaggio}
@@ -87,75 +89,4 @@ def chiedi_a_chatgpt(messaggio):
         logger.error(f"Errore da OpenRouter: {e}")
         return "Oops! Il cervello di Martino è in tilt... riprova più tardi ☕"
 
-@app.route('/webhook', methods=['GET'])
-def verify_webhook():
-    mode = request.args.get("hub.mode")
-    token = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-    if mode == "subscribe" and token == VERIFY_TOKEN:
-        logger.info("Webhook verificato correttamente.")
-        return challenge, 200
-    logger.warning("Tentativo di verifica webhook fallito.")
-    return "Forbidden", 403
-
-@app.route('/webhook', methods=['POST'])
-def handle_messages():
-    data = request.get_json()
-    logger.info(f"Dati ricevuti: {json.dumps(data)}")
-
-    if data and isinstance(data, dict) and "entry" in data:
-        for entry in data["entry"]:
-            for change in entry["changes"]:
-                value = change.get("value", {})
-                messages = value.get("messages", [])
-                for message in messages:
-                    phone_number = message["from"]
-                    text = message["text"]["body"].strip()
-                    lower_text = text.lower()
-
-                    if phone_number in users_state:
-                        user = users_state[phone_number]
-
-                        if user["step"] == "name":
-                            user["name"] = text
-                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🍱")
-                            user["step"] = "birthday"
-
-                        elif user["step"] == "birthday":
-                            user["birthday"] = text
-                            send_whatsapp_message(phone_number, "E tu di dove sei? 🏡 Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗✨")
-                            user["step"] = "city"
-
-                        elif user["step"] == "city":
-                            user["city"] = text
-                            send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕️🍽️🍹?")
-                            user["step"] = "visit_time"
-
-                        elif user["step"] == "visit_time":
-                            user["visit_time"] = text
-                            send_whatsapp_message(phone_number, "Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
-                            user["step"] = "email"
-
-                        elif user["step"] == "email":
-                            user["email"] = text if "@" in text and "." in text else "Sconosciuto"
-                            user["id_utente"] = phone_number
-                            save_to_google_sheets(user)
-                            send_whatsapp_message(phone_number, "Grazie ancora! ☕️🥐💖 A prestissimo!")
-                            del users_state[phone_number]
-
-                    elif "fidelity" in lower_text or "registr" in lower_text:
-                        if user_already_registered(phone_number):
-                            send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕️💛")
-                        else:
-                            users_state[phone_number] = {"step": "name"}
-                            send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
-
-                    else:
-                        risposta = chiedi_a_chatgpt(text)
-                        send_whatsapp_message(phone_number, risposta)
-
-    return "OK", 200
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+# resto del codice invariato...
