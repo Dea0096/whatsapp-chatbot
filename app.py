@@ -30,6 +30,16 @@ sheet = spreadsheet.worksheet(SHEET_NAME)
 
 users_state = {}
 
+SYSTEM_PROMPT = (
+    "Sei Martino, il chatbot ufficiale del Caffè Duomo, bar storico di Rimini. Parli su WhatsApp in modo naturale, simpatico, ironico ma educato. \n"
+    "Rispondi come se fossi il barista amico di tutti: breve, umano, coinvolgente. \n"
+    "Rispetti il contesto: parli solo di fidelity card, prenotazioni, orari, menu, offerte, eventi o informazioni legate al bar.\n"
+    "Usi emoji con naturalezza e senza esagerare. Non sei un bot qualunque. Sei Martino.\n"
+    "Quando ricevi una domanda non chiara, chiedi conferma con garbo. \n"
+    "Esempio: 'posso iscrivermi?' → guida alla registrazione. 'Che fate stasera?' → parli degli eventi. \n"
+    "Alla fine, se ci sta, puoi chiudere con una battuta o un invito amichevole."
+)
+
 def user_already_registered(phone_number):
     phone_numbers = sheet.col_values(13)
     return phone_number in phone_numbers
@@ -59,14 +69,14 @@ def chiedi_a_chatgpt(messaggio):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "Sei Martino, un chatbot per un bar a Rimini. Rispondi con tono amichevole, professionale e brioso, come se parlassi con un cliente affezionato."},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": messaggio}
             ]
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Errore da OpenAI: {e}")
-        return "Oops! Qualcosa è andato storto. Prova di nuovo più tardi."
+        return "Oops! Il cervello di Martino è un po' in tilt... prova più tardi ☕"
 
 @app.route('/webhook', methods=['GET'])
 def verify_webhook():
@@ -91,14 +101,15 @@ def handle_messages():
                 messages = value.get("messages", [])
                 for message in messages:
                     phone_number = message["from"]
-                    text = message["text"]["body"].strip().lower()
+                    text = message["text"]["body"].strip()
+                    lower_text = text.lower()
 
                     if phone_number in users_state:
                         user = users_state[phone_number]
 
                         if user["step"] == "name":
                             user["name"] = text
-                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
+                            send_whatsapp_message(phone_number, "Grazie, ciao! Ora dimmi quando spegni le candeline 🎂✨ Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🏱")
                             user["step"] = "birthday"
 
                         elif user["step"] == "birthday":
@@ -123,7 +134,7 @@ def handle_messages():
                             send_whatsapp_message(phone_number, "Grazie ancora! ☕🥐💖 A prestissimo!")
                             del users_state[phone_number]
 
-                    elif text == "fidelity":
+                    elif "fidelity" in lower_text or "registr" in lower_text:
                         if user_already_registered(phone_number):
                             send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
                         else:
