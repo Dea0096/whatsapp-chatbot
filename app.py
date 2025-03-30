@@ -112,9 +112,11 @@ def webhook():
             message_data = messages[0]
             text = ""
             if "text" in message_data:
-                text = message_data["text"]["body"]
+                text = message_data["text"].get("body", "")
             elif "button" in message_data:
-                text = message_data["button"]["text"]
+                text = message_data["button"].get("text") or message_data["button"].get("payload") or ""
+            elif "interactive" in message_data and "button_reply" in message_data["interactive"]:
+                text = message_data["interactive"]["button_reply"].get("id", "")
 
             user_message = text.lower().strip()
 
