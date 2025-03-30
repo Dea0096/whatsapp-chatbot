@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBO0WDvmFtKuSSSfaQ7O13V4jDnnPD4NwmRA93jubFcPVmaJv0B0CoUYEnAcmMeczLykJfowZCYLIx6kiECZBCLgYGN9wmxNASzjAWqnVdBad4hLDaeaaXA5qgcn4hUOiVxQtTDmjJRb3WITU5kOrRJ0ZCnYgPeoS0BwEsHXaZC2SlZBnZAwXZCsi48OF44drMoMj56R7e7LELwCT76dXZBsMcOJcl76CsLwZDZD"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO22VBKTaCIp7uWrHpSW2NNwaG7cnEkfo2jsWMZCmJ9ZB3HVU8PhXPVbOpmpHi10XiVD24OJcXDdG5ty2mSSMsLpQtftVFtnrZC7OZBQZCw8J1fPHtVg60ZA28wz80i6PvUHvtohdyN5E2GSM4khwsVGeZBEdQNxrVZCH9qZBu76j2r7hOfKFF90HPrqLINd3AdwQ4z1zJdvdRZCOqfLE90Cpypik0vc9RrrwZDZD"
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -69,7 +69,7 @@ def send_whatsapp_buttons(phone_number):
         "interactive": {
             "type": "button",
             "body": {
-                "text": "Ciao! che bello averti qui, scegli cosa vuoi fare"
+                "text": "Ciao sono Martino! la mascotte del Caffè Duomo! Cosa posso fare per te? Vuoi richiedere la tua fidelity? Ti porto qualcosa da sgranocchiare? O vuoi prenotare un evento?"
             },
             "action": {
                 "buttons": [
