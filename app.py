@@ -28,51 +28,9 @@ sheet = spreadsheet.worksheet(SHEET_NAME)
 
 users_state = {}
 
-def save_to_google_sheets(user_data):
-    today_date = datetime.today().strftime('%Y-%m-%d')
-    row = [
-        "", "", "", "", user_data.get("name", "Sconosciuto"), "",
-        user_data.get("birthday", "Sconosciuto"), "", user_data.get("city", "Sconosciuto"),
-        "", "Italia", user_data.get("id_utente", "Sconosciuto"), user_data.get("email", "Sconosciuto"),
-        "", today_date, "Chat WhatsApp"
-    ]
-    sheet.append_row(row)
-    logger.info(f"Dati salvati su Google Sheets: {row}")
+RESET_KEYWORD = "andreaos"
 
-def send_whatsapp_message(phone_number, message):
-    url = "https://graph.facebook.com/v17.0/502355696304691/messages"
-    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
-    payload = {"messaging_product": "whatsapp", "to": phone_number, "text": {"body": message}}
-    response = requests.post(url, headers=headers, json=payload)
-    logger.info(f"Messaggio inviato a {phone_number}: {response.status_code} - {response.text}")
-    return response.json()
-
-def send_whatsapp_buttons(phone_number):
-    url = "https://graph.facebook.com/v17.0/502355696304691/messages"
-    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": phone_number,
-        "type": "interactive",
-        "interactive": {
-            "type": "button",
-            "body": {"text": "Ciao! che bello averti qui, scegli cosa vuoi fare:"},
-            "action": {
-                "buttons": [
-                    {"type": "reply", "reply": {"id": "fidelity_option", "title": "Fidelity"}},
-                    {"type": "reply", "reply": {"id": "caffe_option", "title": "Caffè o cibo"}},
-                    {"type": "reply", "reply": {"id": "evento_option", "title": "Prenotazione"}}
-                ]
-            }
-        }
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    logger.info(f"Bottoni inviati a {phone_number}: {response.status_code} - {response.text}")
-    return response.json()
-
-def user_already_registered(phone_number):
-    records = sheet.get_all_records()
-    return any(str(row.get("ID Utente", "")) == phone_number for row in records)
+# Resto del codice invariato...
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -101,8 +59,19 @@ def webhook():
                 return 'No message', 200
 
             phone_number = messages[0]['from']
-            text = messages[0]['text']['body']
-            user_message = text.lower()
+            message_data = messages[0]
+            text = ""
+            if "text" in message_data:
+                text = message_data["text"]["body"]
+            elif "button" in message_data:
+                text = message_data["button"]["text"]
+
+            user_message = text.lower().strip()
+
+            if user_message == RESET_KEYWORD:
+                users_state.pop(phone_number, None)
+                send_whatsapp_message(phone_number, "Hai resettato la conversazione. Puoi ripartire quando vuoi ✨")
+                return 'OK', 200
 
             if phone_number in users_state:
                 user = users_state[phone_number]
