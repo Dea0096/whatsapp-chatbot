@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBO22VBKTaCIp7uWrHpSW2NNwaG7cnEkfo2jsWMZCmJ9ZB3HVU8PhXPVbOpmpHi10XiVD24OJcXDdG5ty2mSSMsLpQtftVFtnrZC7OZBQZCw8J1fPHtVg60ZA28wz80i6PvUHvtohdyN5E2GSM4khwsVGeZBEdQNxrVZCH9qZBu76j2r7hOfKFF90HPrqLINd3AdwQ4z1zJdvdRZCOqfLE90Cpypik0vc9RrrwZDZD"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO0WDvmFtKuSSSfaQ7O13V4jDnnPD4NwmRA93jubFcPVmaJv0B0CoUYEnAcmMeczLykJfowZCYLIx6kiECZBCLgYGN9wmxNASzjAWqnVdBad4hLDaeaaXA5qgcn4hUOiVxQtTDmjJRb3WITU5kOrRJ0ZCnYgPeoS0BwEsHXaZC2SlZBnZAwXZCsi48OF44drMoMj56R7e7LELwCT76dXZBsMcOJcl76CsLwZDZD"
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -97,19 +97,63 @@ def send_whatsapp_buttons(phone_number):
     }
     requests.post(url, headers=headers, json=payload)
 
-# ... tutto il resto del codice rimane invariato fino a:
+@app.route('/', methods=['POST'])
+def webhook():
+    data = request.get_json()
+    logger.info("Ricevuto: %s", data)
 
-            elif "fidelity" in user_message:
-                users_state[phone_number] = {"step": "name"}
-                send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+    try:
+        text = data['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
+        phone_number = data['entry'][0]['changes'][0]['value']['messages'][0]['from']
+    except Exception as e:
+        logger.error("Errore nel processing del messaggio: %s", e)
+        return "Errore", 500
 
-            elif "martino" in user_message:
-                send_whatsapp_buttons(phone_number)
+    if text.lower() == RESET_KEYWORD:
+        users_state.pop(phone_number, None)
+        send_whatsapp_message(phone_number, "Flusso interrotto. Scrivi di nuovo 'fidelity' per ricominciare quando vuoi.")
+        return "OK", 200
 
-            elif "cibo e bevande" in user_message or "ordinare" in user_message:
-                send_whatsapp_message(phone_number, MENU_TEXT)
+    user = users_state.get(phone_number, {})
 
-            return 'OK', 200
+    if user.get("step") == "name":
+        user["name"] = text
+        send_whatsapp_message(phone_number, "Ora dimmi quando spegni le candeline 🎂 Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🏱")
+        user["step"] = "birthday"
+
+    elif user.get("step") == "birthday":
+        user["birthday"] = text
+        send_whatsapp_message(phone_number, "E tu di dove sei?  Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗")
+        user["step"] = "city"
+
+    elif user.get("step") == "city":
+        user["city"] = text
+        send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕️🍽️🍹?")
+        user["step"] = "visit_time"
+
+    elif user.get("step") == "visit_time":
+        user["visit_time"] = text
+        send_whatsapp_message(phone_number, "Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
+        user["step"] = "email"
+
+    elif user.get("step") == "email":
+        user["email"] = text if "@" in text and "." in text else "Sconosciuto"
+        user["id_utente"] = phone_number
+        sheet.append_row([user.get("id_utente"), user.get("name"), user.get("birthday"), user.get("city"), user.get("visit_time"), user.get("email")])
+        send_whatsapp_message(phone_number, "Grazie ancora! ☕️🥐💖 A prestissimo!")
+        users_state.pop(phone_number)
+
+    elif "fidelity" in text.lower():
+        users_state[phone_number] = {"step": "name"}
+        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+
+    elif "martino" in text.lower():
+        send_whatsapp_buttons(phone_number)
+
+    elif "cibo e bevande" in text.lower() or "ordinare" in text.lower():
+        send_whatsapp_message(phone_number, MENU_TEXT)
+
+    return 'OK', 200
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
