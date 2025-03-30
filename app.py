@@ -13,8 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBO22VBKTaCIp7uWrHpSW2NNwaG7cnEkfo2jsWMZCmJ9ZB3HVU8PhXPVbOpmpHi10XiVD24OJcXDdG5ty2mSSMsLpQtftVFtnrZC7OZBQZCw8J1fPHtVg60ZA28wz80i6PvUHvtohdyN5E2GSM4khwsVGeZBEdQNxrVZCH9qZBu76j2r7hOfKFF90HPrqLINd3AdwQ4z1zJdvdRZCOqfLE90Cpypik0vc9RrrwZDZD"
-GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO0WDvmFtKuSSSfaQ7O13V4jDnnPD4NwmRA93jubFcPVmaJv0B0CoUYEnAcmMeczLykJfowZCYLIx6kiECZBCLgYGN9wmxNASzjAWqnVdBad4hLDaeaaXA5qgcn4hUOiVxQtTDmjJRb3WITU5kOrRJ0ZCnYgPeoS0BwEsHXaZC2SlZBnZAwXZCsi48OF44drMoMj56R7e7LELwCT76dXZBsMcOJcl76CsLwZDZD"
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -26,16 +25,6 @@ client = gspread.authorize(creds)
 
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 sheet = spreadsheet.worksheet(SHEET_NAME)
-
-SYSTEM_PROMPT = (
-    "Sei Martino, il chatbot ufficiale del Caffè Duomo, bar storico di Rimini. Parli su WhatsApp in modo naturale, simpatico, ironico ma educato.\n"
-    "Rispondi come se fossi il barista amico di tutti: breve, umano, coinvolgente.\n"
-    "Rispetti il contesto: parli solo di fidelity card, prenotazioni, orari, menu, offerte, eventi o informazioni legate al bar.\n"
-    "Usi emoji con naturalezza e senza esagerare. Non sei un bot qualunque. Sei Martino.\n"
-    "Quando ricevi una domanda non chiara, chiedi conferma con garbo.\n"
-    "Esempio: 'posso iscrivermi?' → guida alla registrazione. 'Che fate stasera?' → parli degli eventi.\n"
-    "Alla fine, se ci sta, puoi chiudere con una battuta o un invito amichevole."
-)
 
 def save_to_google_sheets(user_data):
     today_date = datetime.today().strftime('%Y-%m-%d')
@@ -55,29 +44,6 @@ def send_whatsapp_message(phone_number, message):
     response = requests.post(url, headers=headers, json=payload)
     logger.info(f"Messaggio inviato a {phone_number}: {response.status_code} - {response.text}")
     return response.json()
-
-def chiedi_a_chatgpt(messaggio):
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_GEMINI_API_KEY}"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [
-                {"parts": [
-                    {"text": f"{SYSTEM_PROMPT}\nUtente: {messaggio}\nMartino:"}
-                ]}
-            ]
-        }
-        response = requests.post(url, headers=headers, json=payload)
-        data = response.json()
-
-        if "candidates" in data and data["candidates"]:
-            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        else:
-            logger.error(f"Risposta inattesa da Gemini: {data}")
-            return "Mi sa che oggi ho bisogno di un altro caffè per ragionare 😅 Riproviamo tra poco?"
-    except Exception as e:
-        logger.error(f"Errore da Gemini: {e}")
-        return "Oops! Il cervello di Martino è in tilt... riprova più tardi ☕"
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -106,10 +72,14 @@ def webhook():
                 return 'No message', 200
 
             phone_number = messages[0]['from']
-            user_message = messages[0]['text']['body']
+            user_message = messages[0]['text']['body'].lower()
 
-            risposta = chiedi_a_chatgpt(user_message)
-            send_whatsapp_message(phone_number, risposta)
+            if "fidelity" in user_message:
+                risposta = (
+                    "Ciao! Per iscriverti alla nostra fidelity card, basta passare dal bar e chiedere a uno di noi. "
+                    "Ti aspettiamo con il sorriso 😊☕"
+                )
+                send_whatsapp_message(phone_number, risposta)
 
             return 'OK', 200
         except Exception as e:
