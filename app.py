@@ -45,6 +45,29 @@ def send_whatsapp_message(phone_number, message):
     logger.info(f"Messaggio inviato a {phone_number}: {response.status_code} - {response.text}")
     return response.json()
 
+def send_whatsapp_buttons(phone_number):
+    url = "https://graph.facebook.com/v17.0/502355696304691/messages"
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_number,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": "Ciao! che bello averti qui, scegli cosa vuoi fare:"},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "fidelity_option", "title": "Vuoi fare la fidelity?"}},
+                    {"type": "reply", "reply": {"id": "caffe_option", "title": "Ti porto un caffè o qualcosa da mangiare?"}},
+                    {"type": "reply", "reply": {"id": "evento_option", "title": "Vuoi prenotare una laurea o un evento?"}}
+                ]
+            }
+        }
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    logger.info(f"Bottoni inviati a {phone_number}: {response.status_code} - {response.text}")
+    return response.json()
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     if request.method == 'GET':
@@ -80,6 +103,9 @@ def webhook():
                     "Ti aspettiamo con il sorriso 😊☕"
                 )
                 send_whatsapp_message(phone_number, risposta)
+
+            elif "martino" in user_message:
+                send_whatsapp_buttons(phone_number)
 
             return 'OK', 200
         except Exception as e:
