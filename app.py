@@ -1,4 +1,4 @@
-import os
+""import os
 import json
 import requests
 import gspread
@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EEAAQaZCVgHS2IBO0WDvmFtKuSSSfaQ7O13V4jDnnPD4NwmRA93jubFcPVmaJv0B0CoUYEnAcmMeczLykJfowZCYLIx6kiECZBCLgYGN9wmxNASzjAWqnVdBad4hLDaeaaXA5qgcn4hUOiVxQtTDmjJRb3WITU5kOrRJ0ZCnYgPeoS0BwEsHXaZC2SlZBnZAwXZCsi48OF44drMoMj56R7e7LELwCT76dXZBsMcOJcl76CsLwZDZD"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO22VBKTaCIp7uWrHpSW2NNwaG7cnEkfo2jsWMZCmJ9ZB3HVU8PhXPVbOpmpHi10XiVD24OJcXDdG5ty2mSSMsLpQtftVFtnrZC7OZBQZCw8J1fPHtVg60ZA28wz80i6PvUHvtohdyN5E2GSM4khwsVGeZBEdQNxrVZCH9qZBu76j2r7hOfKFF90HPrqLINd3AdwQ4z1zJdvdRZCOqfLE90Cpypik0vc9RrrwZDZD"
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -31,8 +31,9 @@ users_state = {}
 RESET_KEYWORD = "andreaos"
 
 MENU_TEXT = """
-🍽️ *MENU DEL GIORNO* 🍽️\n
-*PRIMI PIATTI*:
+🍽️ *MENU DEL GIORNO* 🍽️
+
+*🥣 PRIMI PIATTI*
 • Tortellini al ragù
 • Mezzelune al tartufo
 • Risotto zucca e speck
@@ -40,27 +41,17 @@ MENU_TEXT = """
 • Tortellini speck e zucchine
 • Tagliatelle al cinghiale con carciofi e pecorino
 
-*PIATTO UNICO (componi a piacere)*:
+*🍱 PIATTO UNICO - Componi come vuoi:*
 🌱 = Vegetariano
-• Riso bianco 🌱
-• Riso rosso 🌱
-• Pollo alla piastra
-• Salsiccia al forno
-• Polpette al sugo con piselli
-• Merluzzo impanato
-• Polpettine di verdure 🌱
-• Melanzane grigliate 🌱
-• Erba di campo 🌱
-• Broccoli e cavolfiori 🌱
-• Pomodori gratinati 🌱
-• Melanzane gratinate 🌱
-• Insalatone 🌱
-• Burger veggy (soia o quinoa) 🌱
-• Burger bovino
+• Riso bianco 🌱  • Riso rosso 🌱  • Pollo alla piastra
+• Salsiccia al forno  • Polpette al sugo con piselli
+• Merluzzo impanato  • Polpettine di verdure 🌱
+• Melanzane grigliate 🌱  • Erba di campo 🌱
+• Broccoli e cavolfiori 🌱  • Pomodori gratinati 🌱
+• Melanzane gratinate 🌱  • Insalatone 🌱
+• Burger veggy (soia o quinoa) 🌱  • Burger bovino
 
-*Scegli la porzione:*
-👉 Piccolo | Grande | XL
-
+*🍽️ Scegli la porzione:* Piccolo | Grande | XL
 🥖 Coperto, acqua e pane sono inclusi
 """
 
@@ -80,6 +71,32 @@ def send_whatsapp_message(phone_number, message):
     }
     requests.post(url, headers=headers, json=payload)
 
+def send_whatsapp_buttons(phone_number):
+    url = "https://graph.facebook.com/v18.0/" + os.getenv("WHATSAPP_PHONE_NUMBER_ID") + "/messages"
+    headers = {
+        "Authorization": "Bearer " + ACCESS_TOKEN,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_number,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {
+                "text": "Ciao sono Martino! la mascotte del Caffè Duomo! Cosa posso fare per te?"
+            },
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "fidelity", "title": "Fidelity"}},
+                    {"type": "reply", "reply": {"id": "cibo_bevande", "title": "Cibo e Bevande"}},
+                    {"type": "reply", "reply": {"id": "evento", "title": "Prenota un evento"}}
+                ]
+            }
+        }
+    }
+    requests.post(url, headers=headers, json=payload)
+
 # ... tutto il resto del codice rimane invariato fino a:
 
             elif "fidelity" in user_message:
@@ -93,3 +110,7 @@ def send_whatsapp_message(phone_number, message):
                 send_whatsapp_message(phone_number, MENU_TEXT)
 
             return 'OK', 200
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=True)
