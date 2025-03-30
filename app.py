@@ -135,11 +135,15 @@ def webhook():
                     del users_state[phone_number]
 
             elif "fidelity" in user_message:
-                if user_already_registered(phone_number):
-                    send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
-                else:
+                if os.getenv("TEST_MODE", "true").lower() == "true":
                     users_state[phone_number] = {"step": "name"}
                     send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+                else:
+                    if user_already_registered(phone_number):
+                        send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
+                    else:
+                        users_state[phone_number] = {"step": "name"}
+                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
 
             elif "martino" in user_message:
                 send_whatsapp_buttons(phone_number)
