@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 VERIFY_TOKEN = "mio_verification_token"
-ACCESS_TOKEN = "EAAQaZCVgHS2IBO0WDvmFtKuSSSfaQ7O13V4jDnnPD4NwmRA93jubFcPVmaJv0B0CoUYEnAcmMeczLykJfowZCYLIx6kiECZBCLgYGN9wmxNASzjAWqnVdBad4hLDaeaaXA5qgcn4hUOiVxQtTDmjJRb3WITU5kOrRJ0ZCnYgPeoS0BwEsHXaZC2SlZBnZAwXZCsi48OF44drMoMj56R7e7LELwCT76dXZBsMcOJcl76CsLwZDZD"
+ACCESS_TOKEN = "EAAQaZCVgHS2IBO22VBKTaCIp7uWrHpSW2NNwaG7cnEkfo2jsWMZCmJ9ZB3HVU8PhXPVbOpmpHi10XiVD24OJcXDdG5ty2mSSMsLpQtftVFtnrZC7OZBQZCw8J1fPHtVg60ZA28wz80i6PvUHvtohdyN5E2GSM4khwsVGeZBEdQNxrVZCH9qZBu76j2r7hOfKFF90HPrqLINd3AdwQ4z1zJdvdRZCOqfLE90Cpypik0vc9RrrwZDZD"
 
 GOOGLE_SHEETS_JSON = json.loads(os.getenv("GOOGLE_SHEETS_CREDENTIALS"))
 SPREADSHEET_ID = "16F0ssrfhK3Sgehb8XW3bBTrWSYg75oQris2GdgCsf3w"
@@ -25,6 +25,8 @@ client = gspread.authorize(creds)
 
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 sheet = spreadsheet.worksheet(SHEET_NAME)
+
+users_state = {}
 
 def save_to_google_sheets(user_data):
     today_date = datetime.today().strftime('%Y-%m-%d')
@@ -68,6 +70,10 @@ def send_whatsapp_buttons(phone_number):
     logger.info(f"Bottoni inviati a {phone_number}: {response.status_code} - {response.text}")
     return response.json()
 
+def user_already_registered(phone_number):
+    records = sheet.get_all_records()
+    return any(str(row.get("ID Utente", "")) == phone_number for row in records)
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     if request.method == 'GET':
@@ -95,14 +101,45 @@ def webhook():
                 return 'No message', 200
 
             phone_number = messages[0]['from']
-            user_message = messages[0]['text']['body'].lower()
+            text = messages[0]['text']['body']
+            user_message = text.lower()
 
-            if "fidelity" in user_message:
-                risposta = (
-                    "Ciao! Per iscriverti alla nostra fidelity card, basta passare dal bar e chiedere a uno di noi. "
-                    "Ti aspettiamo con il sorriso 😊☕"
-                )
-                send_whatsapp_message(phone_number, risposta)
+            if phone_number in users_state:
+                user = users_state[phone_number]
+
+                if user["step"] == "name":
+                    user["name"] = text
+                    send_whatsapp_message(phone_number, "Ora dimmi quando spegni le candeline 🎂 Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🎁")
+                    user["step"] = "birthday"
+
+                elif user["step"] == "birthday":
+                    user["birthday"] = text
+                    send_whatsapp_message(phone_number, "E tu di dove sei?  Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗")
+                    user["step"] = "city"
+
+                elif user["step"] == "city":
+                    user["city"] = text
+                    send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕🍽️🍹?")
+                    user["step"] = "visit_time"
+
+                elif user["step"] == "visit_time":
+                    user["visit_time"] = text
+                    send_whatsapp_message(phone_number, "Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
+                    user["step"] = "email"
+
+                elif user["step"] == "email":
+                    user["email"] = text if "@" in text and "." in text else "Sconosciuto"
+                    user["id_utente"] = phone_number
+                    save_to_google_sheets(user)
+                    send_whatsapp_message(phone_number, "Grazie ancora! ☕🥐💖 A prestissimo!")
+                    del users_state[phone_number]
+
+            elif "fidelity" in user_message:
+                if user_already_registered(phone_number):
+                    send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
+                else:
+                    users_state[phone_number] = {"step": "name"}
+                    send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
 
             elif "martino" in user_message:
                 send_whatsapp_buttons(phone_number)
