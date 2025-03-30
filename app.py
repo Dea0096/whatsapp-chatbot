@@ -71,32 +71,6 @@ def send_whatsapp_message(phone_number, message):
     }
     requests.post(url, headers=headers, json=payload)
 
-def send_whatsapp_buttons(phone_number):
-    url = "https://graph.facebook.com/v18.0/" + os.getenv("WHATSAPP_PHONE_NUMBER_ID") + "/messages"
-    headers = {
-        "Authorization": "Bearer " + ACCESS_TOKEN,
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": phone_number,
-        "type": "interactive",
-        "interactive": {
-            "type": "button",
-            "body": {
-                "text": "Ciao sono Martino! la mascotte del Caffè Duomo! Cosa posso fare per te?"
-            },
-            "action": {
-                "buttons": [
-                    {"type": "reply", "reply": {"id": "fidelity", "title": "Fidelity"}},
-                    {"type": "reply", "reply": {"id": "cibo_bevande", "title": "Cibo e Bevande"}},
-                    {"type": "reply", "reply": {"id": "evento", "title": "Prenota un evento"}}
-                ]
-            }
-        }
-    }
-    requests.post(url, headers=headers, json=payload)
-
 @app.route('/', methods=['POST'])
 def webhook():
     data = request.get_json()
@@ -116,41 +90,7 @@ def webhook():
 
     user = users_state.get(phone_number, {})
 
-    if user.get("step") == "name":
-        user["name"] = text
-        send_whatsapp_message(phone_number, "Ora dimmi quando spegni le candeline 🎂 Scrivimi la tua data di nascita in formato GG/MM/AAAA, così possiamo prepararti un pensiero speciale nel tuo giorno! 🏱")
-        user["step"] = "birthday"
-
-    elif user.get("step") == "birthday":
-        user["birthday"] = text
-        send_whatsapp_message(phone_number, "E tu di dove sei?  Dimmi la tua città, così so da dove vieni quando passi a trovarci! 🚗")
-        user["step"] = "city"
-
-    elif user.get("step") == "city":
-        user["city"] = text
-        send_whatsapp_message(phone_number, "Ultima domanda e poi siamo ufficialmente best friends! 😍 Quando passi più spesso a trovarci? Ti accogliamo con il profumo del caffè al mattino, con un piatto delizioso a pranzo o con un drink perfetto per l’aperitivo ☕️🍽️🍹?")
-        user["step"] = "visit_time"
-
-    elif user.get("step") == "visit_time":
-        user["visit_time"] = text
-        send_whatsapp_message(phone_number, "Ecco fatto! 🎉 Sei ufficialmente parte della nostra family! 💛 La tua Fidelity Card è attivata e presto riceverai sorprese e vantaggi esclusivi! 🎫✨ Non vediamo l’ora di vederti da noi! Quasi dimenticavo! Se vuoi ricevere offerte e sorprese esclusive (tranquillo/a, niente spam! 🤞), lasciami la tua email 📩 Ma solo se ti fa piacere! 💛")
-        user["step"] = "email"
-
-    elif user.get("step") == "email":
-        user["email"] = text if "@" in text and "." in text else "Sconosciuto"
-        user["id_utente"] = phone_number
-        sheet.append_row([user.get("id_utente"), user.get("name"), user.get("birthday"), user.get("city"), user.get("visit_time"), user.get("email")])
-        send_whatsapp_message(phone_number, "Grazie ancora! ☕️🥐💖 A prestissimo!")
-        users_state.pop(phone_number)
-
-    elif "fidelity" in text.lower():
-        users_state[phone_number] = {"step": "name"}
-        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
-
-    elif "martino" in text.lower():
-        send_whatsapp_buttons(phone_number)
-
-    elif "cibo e bevande" in text.lower() or "ordinare" in text.lower():
+    if "cibo" in text.lower():
         send_whatsapp_message(phone_number, MENU_TEXT)
 
     return 'OK', 200
