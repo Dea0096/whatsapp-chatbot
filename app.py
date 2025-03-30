@@ -30,7 +30,57 @@ users_state = {}
 
 RESET_KEYWORD = "andreaos"
 
-# Resto del codice invariato...
+def send_whatsapp_message(phone_number, message):
+    url = "https://graph.facebook.com/v18.0/" + os.getenv("WHATSAPP_PHONE_NUMBER_ID") + "/messages"
+    headers = {
+        "Authorization": "Bearer " + ACCESS_TOKEN,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_number,
+        "type": "text",
+        "text": {
+            "body": message
+        }
+    }
+    requests.post(url, headers=headers, json=payload)
+
+def save_to_google_sheets(user):
+    sheet.append_row([
+        user.get("id_utente", ""),
+        user.get("name", ""),
+        user.get("birthday", ""),
+        user.get("city", ""),
+        user.get("visit_time", ""),
+        user.get("email", "")
+    ])
+
+def send_whatsapp_buttons(phone_number):
+    url = f"https://graph.facebook.com/v18.0/{os.getenv('WHATSAPP_PHONE_NUMBER_ID')}/messages"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_number,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {
+                "text": "Ciao! che bello averti qui, scegli cosa vuoi fare"
+            },
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "fidelity", "title": "Fidelity"}},
+                    {"type": "reply", "reply": {"id": "cibo", "title": "Cibo e bevande"}},
+                    {"type": "reply", "reply": {"id": "evento", "title": "Prenota evento"}}
+                ]
+            }
+        }
+    }
+    requests.post(url, headers=headers, json=payload)
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -104,15 +154,8 @@ def webhook():
                     del users_state[phone_number]
 
             elif "fidelity" in user_message:
-                if os.getenv("TEST_MODE", "true").lower() == "true":
-                    users_state[phone_number] = {"step": "name"}
-                    send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
-                else:
-                    if user_already_registered(phone_number):
-                        send_whatsapp_message(phone_number, "Sei già registrato! 🎉 Non c’è bisogno di farlo di nuovo. Ci vediamo presto! ☕💛")
-                    else:
-                        users_state[phone_number] = {"step": "name"}
-                        send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
+                users_state[phone_number] = {"step": "name"}
+                send_whatsapp_message(phone_number, "Ehi! 🥰 Che bello averti qui! Sei a un passo dall’entrare nella nostra family 🎉 Qualche domandina per la fidelity, giuro che sarà veloce e indolore 😜 Pronto/a? Partiamo! Nome e cognome, così posso registrarti correttamente ✨ Se vuoi, puoi dirmi anche il tuo soprannome! Qui siamo tra amici 💛")
 
             elif "martino" in user_message:
                 send_whatsapp_buttons(phone_number)
